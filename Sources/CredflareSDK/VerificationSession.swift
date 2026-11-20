@@ -52,18 +52,29 @@ public actor VerificationSession {
     public func cancel() async throws { _ = try await call("DELETE", as: JSONValue.self) }
     public func get() async throws -> SessionInfo { try await call("GET", as: SessionInfo.self) }
     public func upload(_ data: Data, filename: String, source: CaptureSource, side: DocumentSide, documentTypeID: Int, key: UUID) async throws -> UploadedEvidence {
+        try await uploadEvidence(data, filename: filename, source: source, side: side, documentTypeID: documentTypeID, key: key)
+    }
+    public func uploadSelfie(_ data: Data, filename: String, key: UUID) async throws -> UploadedEvidence {
+        guard ["jpg", "jpeg", "png", "webp"].contains((filename as NSString).pathExtension.lowercased()) else { throw CredflareError.validation("Use a supported selfie image format.") }
+        return try await uploadEvidence(data, filename: filename, source: .camera, side: .front, documentTypeID: nil, key: key)
+    }
+    private func uploadEvidence(_ data: Data, filename: String, source: CaptureSource, side: DocumentSide, documentTypeID: Int?, key: UUID) async throws -> UploadedEvidence {
         guard !filename.isEmpty, !filename.contains("\r"), !filename.contains("\n"), !filename.contains("\""), !filename.contains("/"), !filename.contains("\\") else { throw CredflareError.validation("Choose a file with a valid name.") }
         let ext = (filename as NSString).pathExtension.lowercased()
         let mime = ["jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp", "pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"][ext]
         guard let mime else { throw CredflareError.validation("This file type is not supported.") }
         let boundary = "Credflare-" + UUID().uuidString
         var body = Data()
-        for (name, value) in [("side", side.rawValue), ("capture_source", source.rawValue), ("document_type_id", String(documentTypeID))] {
+        for (name, value) in [("side", side.rawValue), ("capture_source", source.rawValue), ("document_type_id", documentTypeID.map(String.init) ?? "")] where !value.isEmpty {
             body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8))
         }
         body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\nContent-Type: \(mime)\r\n\r\n".utf8))
         body.append(data); body.append(Data("\r\n--\(boundary)--\r\n".utf8))
-        return try await call("POST", suffix: "/uploads/documents", body: body, contentType: "multipart/form-data; boundary=\(boundary)", key: key, as: UploadedEvidence.self)
+        return try await call("POST", suffix: documentTypeID == nil ? "/uploads/biometrics" : "/uploads/documents", body: body, contentType: "multipart/form-data; boundary=\(boundary)", key: key, as: UploadedEvidence.self)
+    }
+    public func submitSelfie(imageFileID: Int, key: UUID) async throws -> Int {
+        let body = try JSONSerialization.data(withJSONObject: ["type": "facial_verification", "image_file_id": imageFileID])
+        return try await call("POST", suffix: "/submit", body: body, contentType: "application/json", key: key, as: SubmissionReceipt.self).id
     }
     public func submit(documentTypeID: Int, evidence: [Evidence], key: UUID) async throws -> Int {
         struct Payload: Encodable {

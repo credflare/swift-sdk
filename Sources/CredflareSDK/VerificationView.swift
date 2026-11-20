@@ -22,11 +22,12 @@ private final class VerificationModel: ObservableObject {
     @Published var editing = false
     private var client: VerificationSession?
     private var submissionKey = UUID()
+    var selfie: Bool { document == nil && (info?.profile?.documentRequirements.isEmpty ?? false) && (info?.profile?.requiresSelfie ?? false) }
     var dirty: Bool { !captures.isEmpty }
     var steps: [CaptureStep] { (try? document?.captureSteps()) ?? [] }
     var reviewing: Bool { document != nil && index == steps.count }
     var step: CaptureStep? { index < steps.count ? steps[index] : nil }
-    var complete: Bool { info?.profile != nil && !pendingReceipt && (info?.profile?.documentRequirements.isEmpty ?? true) && !(info?.profile?.needsHostSteps ?? false) }
+    var complete: Bool { info?.profile != nil && !pendingReceipt && (info?.profile?.documentRequirements.isEmpty ?? true) && !(info?.profile?.requiresSelfie ?? false) && !(info?.profile?.needsHostSteps ?? false) }
     func start(_ provider: @escaping () async throws -> SessionDescriptor) async {
         guard !working else { return }
         working = true; error = nil
@@ -44,12 +45,12 @@ private final class VerificationModel: ObservableObject {
     }
     func clearDocument() { document = nil; captures = [:]; index = 0; error = nil }
     func select(data: Data, name: String, source: CaptureSource) throws {
-        guard let info, let step, info.uploadLimits.maxFileSizeBytes > 0 else { throw CredflareError.validation("File limits are unavailable. Restart the flow.") }
+        guard let info, (step != nil || selfie), info.uploadLimits.maxFileSizeBytes > 0 else { throw CredflareError.validation("File limits are unavailable. Restart the flow.") }
         let ext = (name as NSString).pathExtension.lowercased()
         let normalized = ext == "jpeg" ? "jpg" : ext
         guard info.uploadLimits.allowedFileTypes.contains(normalized) else { throw CredflareError.validation("This file type is not allowed by your verifier.") }
         guard !data.isEmpty, data.count <= info.uploadLimits.maxFileSizeBytes else { throw CredflareError.validation("This file is empty or too large. Choose another file.") }
-        captures[step.id] = Capture(data: data, name: name, source: source); submissionKey = UUID(); error = nil
+        captures[step?.id ?? "selfie"] = Capture(data: data, name: name, source: source); submissionKey = UUID(); error = nil
     }
     func importFile(_ url: URL) async {
         guard !working else { return }; working = true; error = nil
@@ -86,6 +87,19 @@ private final class VerificationModel: ObservableObject {
         defer { working = false }
         do { info = try await client!.get(); pendingReceipt = false }
         catch { show(error) }
+    }
+    func sendSelfie() async {
+        guard !working, let client, var capture = captures["selfie"] else { return }
+        working = true; error = nil
+        do {
+            if capture.fileID == nil {
+                capture.fileID = try await client.uploadSelfie(capture.data, filename: capture.name, key: capture.key).id
+                captures["selfie"] = capture
+            }
+            _ = try await client.submitSelfie(imageFileID: capture.fileID!, key: submissionKey)
+            captures = [:]; pendingReceipt = true; received = true
+        } catch { show(error); working = false; return }
+        working = false; await refresh()
     }
     func send() async {
         guard !working, let client, let document, steps.allSatisfy({ captures[$0.id] != nil }) else { return }
@@ -133,9 +147,9 @@ public struct CredflareVerificationView: View {
             }.padding(.horizontal, 24).padding(.vertical, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    content
+                    content.multilineTextAlignment(.center)
                     if let error = model.error { Text(error).foregroundStyle(.red).padding().overlay(RoundedRectangle(cornerRadius: 12).stroke(.red)).accessibilityAddTraits(.updatesFrequently) }
-                    HStack { Spacer(); Text("Secured by Credflare").font(.caption).foregroundStyle(.secondary); Spacer() }.padding(.top, 24)
+                    HStack(spacing: 6) { Spacer(); footerMark; Text("Secured by Credflare").font(.caption).foregroundStyle(.secondary); Spacer() }.padding(.top, 24)
                 }.padding(24).frame(maxWidth: 600)
             }
         }
@@ -158,29 +172,41 @@ public struct CredflareVerificationView: View {
             case .failure(let error): if (error as? CocoaError)?.code != .userCancelled { model.show(error) }
             }
         }
-        .sheet(isPresented: $camera) { CameraPicker { image in camera = false; if let image { model.photo(image) } }.ignoresSafeArea() }
+        .sheet(isPresented: $camera) { CameraPicker(front: model.selfie) { image in camera = false; if let image { model.photo(image) } }.ignoresSafeArea() }
     }
     @ViewBuilder private var content: some View {
         if model.working {
-            ProgressView(model.info == nil ? "Getting ready…" : "Sending or checking your document…").frame(maxWidth: .infinity).padding(.vertical, 64)
+            ProgressView(model.info == nil ? "Getting ready…" : "Sending or checking your evidence…").frame(maxWidth: .infinity).padding(.vertical, 64)
         } else if model.info == nil {
-            title("Share your documents")
-            Text("Choose a document, add each requested side, then review before sending.").foregroundStyle(.secondary)
+            title("Verify your identity")
+            Text("Follow the steps requested by your verifier. Review each item before sending.").foregroundStyle(.secondary)
             action(model.error == nil ? "Start" : "Try again") { Task { await model.start(provider) } }
         } else if model.pendingReceipt {
-            title("Your document was sent")
+            title("Your evidence was sent")
             Text("Check your progress to see whether anything else is needed.")
             action("Check progress") { Task { await model.refresh() } }
         } else if model.complete {
-            title("Documents received")
+            title("Evidence received")
             Text("Your verifier will review what you sent.").foregroundStyle(.secondary)
             action("Done") { onResult(.submitted) }
+        } else if model.selfie {
+            title(model.captures["selfie"] == nil ? "Take a selfie" : "Review your selfie")
+            Text("Face the camera in even lighting. Keep your whole face visible and remove anything covering it.").foregroundStyle(.secondary)
+            if let capture = model.captures["selfie"] {
+                preview(capture)
+                Button("Retake selfie") { openCamera() }
+                action("Send selfie") { Task { await model.sendSelfie() } }
+            } else { action("Open front camera") { openCamera() } }
+            Text("Your selfie will be sent to your verifier for review.").font(.caption).foregroundStyle(.secondary)
         } else if let document = model.document {
             Button("‹ Documents") { if model.dirty { confirmDiscard = true } else { model.clearDocument() } }
             Text(document.documentType.name).font(.subheadline).foregroundStyle(.secondary)
             captureContent
         } else {
-            title("Documents requested")
+            title((model.info?.profile?.documentRequirements.isEmpty ?? true) ? "Continue verification" : "Documents requested")
+            if !(model.info?.profile?.documentRequirements.isEmpty ?? true), model.info?.profile?.requiresSelfie == true {
+                Text(!(model.info?.profile?.formSchema?.isEmpty ?? true) ? "After your ID: take a selfie, then complete your details in the requesting app." : "After your ID: take a selfie.").foregroundStyle(.secondary).frame(maxWidth: .infinity)
+            }
             if let message = model.info?.customMessage, !message.isEmpty { Text(message).foregroundStyle(.secondary) }
             ForEach(model.info?.profile?.documentRequirements ?? []) { requirement in
                 VStack(alignment: .leading, spacing: 8) {
@@ -192,7 +218,7 @@ public struct CredflareVerificationView: View {
                 }
             }
             if model.info?.profile?.documentRequirements.isEmpty ?? true {
-                Text("Your documents are received. Return to the requesting app for its remaining checks.")
+                Text("Continue in the requesting app to complete the remaining details.")
                 action("Return to app") { onResult(.hostActionRequired) }
             }
         }
@@ -227,7 +253,8 @@ public struct CredflareVerificationView: View {
             }
         }
     }
-    private func title(_ value: String) -> some View { Text(value).font(.title2.weight(.bold)).accessibilityAddTraits(.isHeader) }
+    private var footerMark: some View { BrandMark().frame(width: 18, height: 18).accessibilityHidden(true) }
+    private func title(_ value: String) -> some View { Text(value).font(.title2.weight(.bold)).multilineTextAlignment(.center).frame(maxWidth: .infinity).accessibilityAddTraits(.isHeader) }
     private func action(_ label: String, _ work: @escaping () -> Void) -> some View { Button(action: work) { Text(label).font(.headline).foregroundStyle(colorScheme == .dark ? Color(red: 22/255, green: 41/255, blue: 78/255) : Color.white).frame(maxWidth: .infinity, minHeight: 44) }.buttonStyle(.borderedProminent).controlSize(.large) }
     private func thumbnail(_ data: Data) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
@@ -235,7 +262,7 @@ public struct CredflareVerificationView: View {
         return UIImage(cgImage: image)
     }
     @ViewBuilder private func preview(_ capture: VerificationModel.Capture) -> some View {
-        if let image = thumbnail(capture.data) { Image(uiImage: image).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: 200).accessibilityLabel("Selected document") }
+        if let image = thumbnail(capture.data) { Image(uiImage: image).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: 200).accessibilityLabel(model.selfie ? "Your selfie preview" : "Selected document") }
         else { Label(capture.name, systemImage: "doc.fill").frame(maxWidth: .infinity, minHeight: 100).background(.secondary.opacity(0.1)).clipShape(RoundedRectangle(cornerRadius: 14)) }
     }
     private var allowedTypes: [UTType] {
@@ -245,14 +272,32 @@ public struct CredflareVerificationView: View {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else { model.error = "The camera is unavailable. Use a physical device for camera testing."; return }
         let permission = AVCaptureDevice.authorizationStatus(for: .video)
         guard permission != .denied && permission != .restricted else { model.error = "Camera access is off. Enable it in Settings, then try again."; return }
+        if model.selfie && !UIImagePickerController.isCameraDeviceAvailable(.front) { model.error = "A front camera is required for this step."; return }
         camera = true
     }
 }
+private struct BrandMark: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIImageView {
+        let view = UIImageView()
+        if let path = Bundle.module.url(forResource: "credflare-mark", withExtension: "png")?.path, let image = UIImage(contentsOfFile: path) {
+            view.image = UIGraphicsImageRenderer(size: CGSize(width: 18, height: 18)).image { _ in image.draw(in: CGRect(x: 2, y: 2, width: 14, height: 14)) }.withRenderingMode(.alwaysOriginal)
+        }
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        view.contentMode = .scaleAspectFit
+        view.backgroundColor = .white
+        view.layer.cornerRadius = 3
+        view.clipsToBounds = true
+        return view
+    }
+    func updateUIView(_ view: UIImageView, context: Context) {}
+}
 private struct CameraPicker: UIViewControllerRepresentable {
+    let front: Bool
     let completion: (UIImage?) -> Void
     func makeCoordinator() -> Coordinator { Coordinator(completion) }
     func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController(); picker.sourceType = .camera; picker.mediaTypes = [UTType.image.identifier]; picker.delegate = context.coordinator; return picker
+        let picker = UIImagePickerController(); picker.sourceType = .camera; if front { picker.cameraDevice = .front }; picker.mediaTypes = [UTType.image.identifier]; picker.delegate = context.coordinator; return picker
     }
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {

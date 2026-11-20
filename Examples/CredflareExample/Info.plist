@@ -10,7 +10,7 @@
 <key>CFBundleVersion</key><string>1</string>
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
-<key>NSCameraUsageDescription</key><string>Photograph documents requested by your verifier.</string>
+<key>NSCameraUsageDescription</key><string>Capture documents and a selfie requested by your verifier.</string>
 <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 <key>UIFileSharingEnabled</key><true/>
 <key>LSSupportsOpeningDocumentsInPlace</key><true/>

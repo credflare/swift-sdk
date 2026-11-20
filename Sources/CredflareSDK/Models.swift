@@ -72,7 +72,12 @@ public struct SessionInfo: Decodable {
         public let formSchema: JSONValue?
         public let verificationRequirements: [JSONValue]
         enum CodingKeys: String, CodingKey { case documentRequirements = "document_requirements", formSchema = "form_schema", verificationRequirements = "verification_requirements" }
-        public var needsHostSteps: Bool { !(formSchema?.isEmpty ?? true) || !verificationRequirements.isEmpty }
+        public var requiresSelfie: Bool { verificationRequirements.contains { item in
+            if case .object(let value) = item, case .string(let type) = value["verification_type"] { return type == "facial_verification" }; return false
+        } }
+        public var needsHostSteps: Bool { !(formSchema?.isEmpty ?? true) || verificationRequirements.contains { item in
+            if case .object(let value) = item, case .string(let type) = value["verification_type"] { return type != "facial_verification" }; return true
+        } }
     }
 }
 

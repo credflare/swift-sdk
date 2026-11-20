@@ -70,4 +70,24 @@ final class ClientTests: XCTestCase {
         XCTAssertFalse(String(describing: try descriptor()).contains("test-session-token"))
         XCTAssertFalse(String(reflecting: try descriptor()).contains("test-session-token"))
     }
+    func testConfiguredSelfieUsesBiometricHTTPContract() async throws {
+        let client = VerificationSession(try descriptor("selfie"))
+        let info = try await client.get()
+        XCTAssertTrue(info.profile!.requiresSelfie)
+        XCTAssertFalse(info.profile!.needsHostSteps)
+        XCTAssertTrue(info.profile!.documentRequirements.isEmpty)
+        let key = UUID()
+        let bytes = try Data(contentsOf: Bundle.module.url(forResource: "sample-front", withExtension: "png", subdirectory: "Fixtures")!)
+        let file = try await client.uploadSelfie(bytes, filename: "selfie.png", key: key)
+        _ = try await client.submitSelfie(imageFileID: file.id, key: UUID())
+        let (raw, _) = try await URLSession.shared.data(from: base.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("stats"))
+        let stats = try JSONSerialization.jsonObject(with: raw) as! [String: Any]
+        XCTAssertTrue((stats["selfieUpload"] as! String).contains("name=\"capture_source\"\r\n\r\ncamera"))
+        XCTAssertFalse((stats["selfieUpload"] as! String).contains("document_type_id"))
+        XCTAssertEqual(stats["selfieKey"] as? String, key.uuidString.lowercased())
+        let body = try JSONSerialization.jsonObject(with: (stats["selfieBody"] as! String).data(using: .utf8)!) as! [String: Any]
+        XCTAssertEqual(body["type"] as? String, "facial_verification")
+        XCTAssertEqual(body["image_file_id"] as? Int, file.id)
+    }
+
 }

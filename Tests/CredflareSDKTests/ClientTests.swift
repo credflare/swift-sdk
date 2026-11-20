@@ -210,4 +210,29 @@ final class ClientTests: XCTestCase {
             }
         }
     }
+    func testFakeProviderLivenessRunUploadsEvidenceAndSubmits() async throws {
+        let client = VerificationSession(try descriptor("capture"))
+        let issued = try await client.createLivenessChallenge()
+        let capture = try LivenessCapture(challenge: issued, provider: FakeFaceSignalProvider(script: passingScript), clock: { ISO8601.parse("2026-11-20T23:04:00Z")! })
+        let buffer = pixelBuffer()
+        for index in passingScript.indices { _ = capture.process(buffer, seconds: Double(index) * 0.066) }
+        let video = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+        try Data(repeating: 1, count: 128).write(to: video)
+        defer { try? FileManager.default.removeItem(at: video) }
+        let evidence = try XCTUnwrap(capture.evidence(video: video))
+        var keys: [String: UUID] = [:]
+        let id = try await LivenessSubmitter.submit(evidence, client: client, keys: &keys)
+        XCTAssertEqual(id, 1)
+        XCTAssertEqual(Set(keys.keys), ["gesture-0", "gesture-1", "gesture-2", "video", "selfie", "submit"])
+        let uploads = try await requests("/uploads/biometrics")
+        XCTAssertEqual(uploads.map { ($0["body"] as! String).contains("Content-Type: image/jpeg") }, [true, true, true, false, true])
+        let submits = try await requests("/submit")
+        let body = try json(try XCTUnwrap(submits.first))
+        XCTAssertEqual(body["gesture_file_ids"] as? [Int], [3, 3, 3])
+        XCTAssertEqual(body["video_file_id"] as? Int, 5)
+        XCTAssertEqual(body["image_file_id"] as? Int, 4)
+        let metadata = body["metadata"] as! [String: Any]
+        XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["challenge"] as! String }, issued.gestures)
+        XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["completed"] as! Bool }, [true, true, true])
+    }
 }

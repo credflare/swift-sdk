@@ -1,0 +1,11 @@
+{
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+        "id": 1,
+        "filename": "verification_6b002ee0956ae5.58333666_1795174112.png",
+        "original_name": "front.png",
+        "mime_type": "image/png",
+        "size": 91
+    }
+}

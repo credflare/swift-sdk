@@ -1,0 +1,11 @@
+{
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+        "id": 3,
+        "filename": "verification_6b00d1d37a62f0.34481956_1795215827.jpg",
+        "original_name": "turn_right.jpg",
+        "mime_type": "image/jpeg",
+        "size": 2291
+    }
+}

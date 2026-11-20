@@ -2,13 +2,13 @@
     "success": true,
     "message": "Operation successful",
     "data": {
-        "session_id": "01a1f8b7-1d59-70ed-8cf2-b81c3241ca41",
-        "expires_at": "2026-11-20T11:58:32.000000Z",
+        "session_id": "01a1fb33-95e6-71fb-8187-8657edeee2c4",
+        "expires_at": "2026-11-20T23:33:44.000000Z",
         "status": "pending",
         "environment": "live",
         "custom_message": null,
         "requester": {
-            "name": "Terrill Kling Jr.'s Workspace",
+            "name": "Omari Mayert's Workspace",
             "logo_url": null
         },
         "brand": null,
@@ -52,12 +52,15 @@
                         "capture_method": "upload",
                         "category": "document",
                         "is_active": true,
-                        "created_at": "2026-11-20T11:28:32.000000Z",
-                        "updated_at": "2026-11-20T11:28:32.000000Z",
+                        "created_at": "2026-11-20T23:03:44.000000Z",
+                        "updated_at": "2026-11-20T23:03:44.000000Z",
                         "deleted_at": null
                     },
+                    "capture_method": "upload",
                     "group_key": null,
                     "rule": "all_of",
+                    "min_required": null,
+                    "remaining_required": 1,
                     "requested_sides": [
                         "front",
                         "back"
@@ -67,7 +70,7 @@
         },
         "capabilities": {
             "trusted_camera": false,
-            "liveness": false,
+            "liveness": "challenge",
             "deepfake_detection": false
         }
     }

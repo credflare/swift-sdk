@@ -1,0 +1,70 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "session_id": "01a1fb33-a1d0-7081-aa9e-7ce29c2a41d8",
+        "expires_at": "2026-11-20T23:33:47.000000Z",
+        "status": "pending",
+        "environment": "live",
+        "custom_message": null,
+        "requester": {
+            "name": "Meghan Stiedemann MD's Workspace",
+            "logo_url": null
+        },
+        "brand": null,
+        "upload_limits": {
+            "max_file_size_bytes": 10485760,
+            "allowed_file_types": [
+                "jpg",
+                "png",
+                "webp",
+                "pdf"
+            ],
+            "max_uploads_per_requirement": 5
+        },
+        "profile": {
+            "name": "Liveness and location",
+            "form_schema": null,
+            "verification_requirements": [
+                {
+                    "verification_type": "facial_verification",
+                    "settings": {
+                        "gestures": [
+                            "blink",
+                            "smile",
+                            "turn_left",
+                            "turn_right",
+                            "nod"
+                        ],
+                        "gesture_count": 3,
+                        "record_video": true,
+                        "video_retention_days": 30
+                    }
+                },
+                {
+                    "verification_type": "location_verification",
+                    "settings": {
+                        "max_accuracy_m": 50,
+                        "max_age_s": 60,
+                        "mock_location": "reject",
+                        "ip_country": "flag",
+                        "reference": {
+                            "rule": "within",
+                            "places": [
+                                {
+                                    "label": "Head office"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "document_requirements": []
+        },
+        "capabilities": {
+            "trusted_camera": false,
+            "liveness": "challenge",
+            "deepfake_detection": false
+        }
+    }
+}

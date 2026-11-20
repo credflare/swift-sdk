@@ -95,13 +95,16 @@ public struct DocumentRequirement: Decodable, Identifiable {
         enum CodingKeys: String, CodingKey { case id, name, twoSided = "two_sided", captureMethod = "capture_method" }
     }
     enum CodingKeys: String, CodingKey { case documentType = "document_type", captureMethod = "capture_method", requestedSides = "requested_sides", groupKey = "group_key", rule, minRequired = "min_required", remainingRequired = "remaining_required" }
-    public var policy: String { captureMethod ?? (documentType.captureMethod == "camera" ? "either" : "upload") }
-    public var isSupported: Bool { ["upload", "either", "snapshot", "snapshot_and_upload"].contains(policy) }
+    public var policy: String {
+        let method = captureMethod ?? (documentType.captureMethod == "camera" ? "snapshot_or_upload" : "upload")
+        return method == "either" ? "snapshot_or_upload" : method
+    }
+    public var isSupported: Bool { ["upload", "snapshot_or_upload", "snapshot", "snapshot_and_upload"].contains(policy) }
     public var methodSummary: String {
         switch policy {
         case "snapshot": return "Camera photos"
         case "upload": return "Saved files"
-        case "either": return "Photo or file"
+        case "snapshot_or_upload": return "Photo or file"
         case "snapshot_and_upload": return "Photo and saved file"
         default: return "Not available in this app"
         }
@@ -109,13 +112,13 @@ public struct DocumentRequirement: Decodable, Identifiable {
     public func captureSteps() throws -> [CaptureStep] {
         guard isSupported else { throw CredflareError.validation("This capture method is not available in this app.") }
         let sides = requestedSides ?? (documentType.twoSided ? [.front, .back] : [.front])
-        let sources: [CaptureInput] = policy == "snapshot_and_upload" ? [.camera, .upload] : [policy == "snapshot" ? .camera : policy == "either" ? .either : .upload]
+        let sources: [CaptureInput] = policy == "snapshot_and_upload" ? [.camera, .upload] : [policy == "snapshot" ? .camera : policy == "snapshot_or_upload" ? .cameraOrUpload : .upload]
         return sources.flatMap { source in sides.map { CaptureStep(side: $0, input: source) } }
     }
 }
 public enum DocumentSide: String, Codable { case front, back; public var label: String { rawValue.capitalized } }
 public enum CaptureSource: String, Codable { case camera, upload }
-public enum CaptureInput: String { case camera, upload, either }
+public enum CaptureInput: String { case camera, upload, cameraOrUpload = "camera_or_upload" }
 public struct CaptureStep: Identifiable {
     public let side: DocumentSide; public let input: CaptureInput
     public var id: String { "\(input.rawValue):\(side.rawValue)" }

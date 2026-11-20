@@ -8,7 +8,7 @@ final class ClientTests: XCTestCase {
         server = Process()
         server.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         let script = Bundle.module.url(forResource: "ContractServer", withExtension: "mjs")!
-        let directory = Bundle.module.url(forResource: "capture-either", withExtension: "json", subdirectory: "Fixtures")!.deletingLastPathComponent()
+        let directory = Bundle.module.url(forResource: "capture-snapshot-or-upload", withExtension: "json", subdirectory: "Fixtures")!.deletingLastPathComponent()
         server.arguments = ["node", script.path, directory.path]
         let pipe = Pipe(); server.standardOutput = pipe
         try server.run()
@@ -20,7 +20,7 @@ final class ClientTests: XCTestCase {
         if server?.isRunning == true { server.terminate(); server.waitUntilExit() }
     }
     func descriptor(_ token: String = "test-session-token", base: URL? = nil) throws -> SessionDescriptor {
-        let raw = try fixture("capture-either")
+        let raw = try fixture("capture-snapshot-or-upload")
         let json = try JSONSerialization.jsonObject(with: raw) as! [String: Any]
         let data = json["data"] as! [String: Any]
         return try SessionDescriptor(sessionID: UUID(uuidString: data["session_id"] as! String)!, token: token, apiBaseURL: base ?? self.base, expiresAt: data["expires_at"] as! String)
@@ -30,7 +30,7 @@ final class ClientTests: XCTestCase {
         let client = VerificationSession(try descriptor())
         let info = try await client.get()
         let requirement = try XCTUnwrap(info.profile?.documentRequirements.first)
-        XCTAssertEqual(try requirement.captureSteps().map(\.id), ["either:front", "either:back"])
+        XCTAssertEqual(try requirement.captureSteps().map(\.id), ["camera_or_upload:front", "camera_or_upload:back"])
         struct Payload: Decodable { let data: SessionInfo }
         let both = try JSONDecoder().decode(Payload.self, from: fixture("capture-snapshot_and_upload"))
         XCTAssertEqual(try both.data.profile!.documentRequirements[0].captureSteps().map(\.id), ["camera:front", "camera:back", "upload:front", "upload:back"])

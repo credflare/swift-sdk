@@ -49,7 +49,7 @@
             "updated_at": "2026-11-20T12:27:44.000000Z",
             "deleted_at": null
           },
-          "capture_method": "either",
+          "capture_method": "snapshot_or_upload",
           "group_key": null,
           "rule": "all_of",
           "min_required": null,

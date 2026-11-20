@@ -16,8 +16,8 @@ const server = createServer(async (req,res) => {
  if(req.url.endsWith('/uploads/documents')){uploadSource=body.includes('name="capture_source"\r\n\r\nupload')?'upload':'unknown';requestKey=req.headers['x-idempotency-key'];}
  if(req.url.endsWith('/uploads/biometrics')) {selfieUpload=body;selfieKey=req.headers['x-idempotency-key'];}
  if(req.url.endsWith('/submit') && body.includes('facial_verification')) selfieBody=body;
- const fixture = token === 'Bearer unauthorized' ? 'unauthorized' : req.url.endsWith('/submit') ? (body.includes('facial_verification')?'facial-submission':'submission') : req.url.endsWith('/uploads/biometrics')?'facial-upload' : req.url.endsWith('/uploads/documents') ? 'upload' : token === 'Bearer selfie' ? 'facial-session' : 'capture-either';
- res.writeHead(fixture==='unauthorized'?401:['capture-either','facial-session'].includes(fixture)?200:201,{'Content-Type':'application/json'});
+ const fixture = token === 'Bearer unauthorized' ? 'unauthorized' : req.url.endsWith('/submit') ? (body.includes('facial_verification')?'facial-submission':'submission') : req.url.endsWith('/uploads/biometrics')?'facial-upload' : req.url.endsWith('/uploads/documents') ? 'upload' : token === 'Bearer selfie' ? 'facial-session' : 'capture-snapshot-or-upload';
+ res.writeHead(fixture==='unauthorized'?401:['capture-snapshot-or-upload','facial-session'].includes(fixture)?200:201,{'Content-Type':'application/json'});
  if(req.method==='DELETE')return res.end(await readFile(join(fixtures,'cancelled.json')));
  res.end(await readFile(join(fixtures,fixture+'.json')));
 });

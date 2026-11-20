@@ -1,0 +1,37 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "session_id": "01a1fa09-383a-7289-b1e7-a78ce9a83d61",
+        "expires_at": "2026-11-20T18:07:50.000000Z",
+        "status": "in_progress",
+        "environment": "live",
+        "custom_message": null,
+        "requester": {
+            "name": "Landen Robel's Workspace",
+            "logo_url": null
+        },
+        "brand": null,
+        "upload_limits": {
+            "max_file_size_bytes": 10485760,
+            "allowed_file_types": [
+                "jpg",
+                "png",
+                "webp",
+                "pdf"
+            ],
+            "max_uploads_per_requirement": 5
+        },
+        "profile": {
+            "name": "Selfie collection",
+            "form_schema": null,
+            "verification_requirements": [],
+            "document_requirements": []
+        },
+        "capabilities": {
+            "trusted_camera": false,
+            "liveness": false,
+            "deepfake_detection": false
+        }
+    }
+}

@@ -51,7 +51,7 @@ public enum LocationCopy {
         case (.within, 1): return CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNeedWithin, ["place": first])
         case (.within, _): return CredflareCopy.text(reference.match == "all" ? CredflareSpec.CopyKey.locationPlaceNeedWithinAll : CredflareSpec.CopyKey.locationPlaceNeedWithinAny, ["places": places])
         case (.outside, 1): return CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNeedOutside, ["place": first])
-        case (.outside, _): return CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNeedOutsideAll, ["places": places])
+        case (.outside, _): return CredflareCopy.text(reference.match == "all" ? CredflareSpec.CopyKey.locationPlaceNeedOutsideAll : CredflareSpec.CopyKey.locationPlaceNeedOutsideAny, ["places": places])
         }
     }
 }

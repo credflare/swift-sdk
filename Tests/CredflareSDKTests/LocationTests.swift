@@ -80,7 +80,9 @@ final class LocationTests: XCTestCase {
         }
         let outside = try reference(#"{"rule":"outside","places":[{"label":"Depot"},{"label":"Yard"}]}"#)
         XCTAssertEqual(LocationCopy.title(outside), "Share your location")
-        XCTAssertEqual(LocationCopy.requirement(outside), "You need to be away from these places: Depot, Yard.")
+        XCTAssertEqual(LocationCopy.requirement(outside), "You need to be away from at least one of these places: Depot, Yard.")
+        let outsideAll = try reference(#"{"rule":"outside","match":"all","places":[{"label":"Depot"},{"label":"Yard"}]}"#)
+        XCTAssertEqual(LocationCopy.requirement(outsideAll), "You need to be away from these places: Depot, Yard.")
         let all = try reference(#"{"rule":"within","match":"all","places":[{"label":"Depot"},{"label":"Yard"}]}"#)
         XCTAssertEqual(LocationCopy.requirement(all), "You need to be at each of these places: Depot, Yard.")
         let any = try reference(#"{"rule":"within","places":[{"label":"Depot"},{"label":"Yard"}]}"#)

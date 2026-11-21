@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.0.0 (4cd1169538d1). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.0.0 (3f923c2940de). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -59,7 +59,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.0.0"
-    public static let hash = "4cd1169538d1"
+    public static let hash = "3f923c2940de"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -550,6 +550,7 @@ public enum CredflareSpec {
             "location.place.need_within_all": "You need to be at each of these places: {places}.",
             "location.place.need_outside": "You need to be away from {place}.",
             "location.place.need_outside_all": "You need to be away from these places: {places}.",
+            "location.place.need_outside_any": "You need to be away from at least one of these places: {places}.",
             "location.place.not_matched_within": "You do not seem to be at {place} yet. Move closer, then try again.",
             "location.place.not_matched_outside": "You seem to be too close to {place}. Move away, then try again.",
             "location.place.not_precise": "Your location is not precise enough to check this place. Move near a window or outside, then try again.",
@@ -730,6 +731,7 @@ public enum CredflareSpec {
         public static let locationPlaceNeedWithinAll: String = "location.place.need_within_all"
         public static let locationPlaceNeedOutside: String = "location.place.need_outside"
         public static let locationPlaceNeedOutsideAll: String = "location.place.need_outside_all"
+        public static let locationPlaceNeedOutsideAny: String = "location.place.need_outside_any"
         public static let locationPlaceNotMatchedWithin: String = "location.place.not_matched_within"
         public static let locationPlaceNotMatchedOutside: String = "location.place.not_matched_outside"
         public static let locationPlaceNotPrecise: String = "location.place.not_precise"

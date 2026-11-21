@@ -39,7 +39,7 @@ final class LiveBackendTests: XCTestCase {
         let info = try await client.get()
         XCTAssertNotNil(info.profile?.requirements.first { $0.facial != nil })
         let challenge = try await client.createLivenessChallenge()
-        let capture = try LivenessCapture(challenge: challenge, provider: FakeFaceSignalProvider(script: script(for: challenge.gestures)))
+        let capture = try LivenessCapture(challenge: challenge, provider: FakeFaceSignalProvider(script: scriptPassing(challenge.gestures)))
         let buffer = pixelBuffer()
         var index = 0
         while !capture.isFinished && index < 200 { _ = capture.process(buffer, seconds: Double(index) * 0.066); index += 1 }
@@ -51,19 +51,5 @@ final class LiveBackendTests: XCTestCase {
         XCTAssertGreaterThan(id, 0)
         let reused = try? await client.submitFacial(FacialSubmission(challengeID: challenge.challengeID, imageFileID: 1, gestureFileIDs: [1], videoFileID: nil, provider: "vision", livenessResults: [], faceDetection: evidence.faceDetection, capturedAt: ISO8601.format(Date())), key: UUID())
         XCTAssertNil(reused, "A used challenge must be rejected")
-    }
-
-    func script(for gestures: [String]) -> [FaceSample] {
-        var samples = [face()]
-        for gesture in gestures {
-            switch gesture {
-            case "blink": samples += [face(eye: 0.9), face(eye: 0.1), face(eye: 0.9)]
-            case "smile": samples += Array(repeating: face(smile: 0.9), count: 5)
-            case "turn_left": samples += [face(yaw: 30), face(yaw: 0)]
-            case "turn_right": samples += [face(yaw: -30), face(yaw: 0)]
-            default: samples += [face(pitch: -25), face(pitch: 0)]
-            }
-        }
-        return samples + [face()]
     }
 }

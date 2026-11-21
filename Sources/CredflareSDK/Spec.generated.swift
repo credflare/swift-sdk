@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.0.0 (1ee014f4a1df). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.0.0 (13c02ea43d7a). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -59,7 +59,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.0.0"
-    public static let hash = "1ee014f4a1df"
+    public static let hash = "13c02ea43d7a"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -766,6 +766,39 @@ public enum CredflareSpec {
         public static let errorsSendSelfieFailed: String = "errors.send_selfie_failed"
         public static let errorsChallengeFailed: String = "errors.challenge_failed"
         public static let errorsSendLocationFailed: String = "errors.send_location_failed"
+    }
+
+    public enum ErrorCode {
+        public static let locationAccuracy: String = "location.accuracy"
+        public static let locationStale: String = "location.stale"
+        public static let locationMock: String = "location.mock"
+        public static let locationIpCountry: String = "location.ip_country"
+        public static let locationReferenceNotMatched: String = "location.reference_not_matched"
+        public static let livenessChallengeInvalid: String = "liveness.challenge_invalid"
+        public static let livenessChallengeExpired: String = "liveness.challenge_expired"
+        public static let livenessChallengeUsed: String = "liveness.challenge_used"
+        public static let livenessGestureMismatch: String = "liveness.gesture_mismatch"
+        public static let livenessFrameOutOfWindow: String = "liveness.frame_out_of_window"
+        public static let livenessNotCamera: String = "liveness.not_camera"
+        public static let livenessVideoMissing: String = "liveness.video_missing"
+        public static let livenessVideoTooLong: String = "liveness.video_too_long"
+        public static let livenessVideoUnreadable: String = "liveness.video_unreadable"
+        public static let meanings: [String: String] = [
+            "location.accuracy": "Accuracy is missing or larger than max_accuracy_m",
+            "location.stale": "fix_time is missing, older than max_age_s plus clock_skew_s, or in the future",
+            "location.mock": "is_mock is true and mock_location is reject",
+            "location.ip_country": "The IP country does not match and ip_country is reject",
+            "location.reference_not_matched": "The place rule failed and on_mismatch is reject",
+            "liveness.challenge_invalid": "The challenge is unknown, belongs to another case or was replaced",
+            "liveness.challenge_expired": "The challenge expired",
+            "liveness.challenge_used": "The challenge was already used",
+            "liveness.gesture_mismatch": "A gesture frame is missing, extra, out of order or for a gesture the challenge does not include",
+            "liveness.frame_out_of_window": "A file was uploaded before the challenge was issued or after it expired",
+            "liveness.not_camera": "Evidence was not uploaded with capture_source=camera for this challenge",
+            "liveness.video_missing": "record_video is on and no video for this challenge was sent",
+            "liveness.video_too_long": "The video is longer than max_video_seconds plus one second",
+            "liveness.video_unreadable": "The server cannot read the video duration",
+        ]
     }
 
     public enum Tokens {

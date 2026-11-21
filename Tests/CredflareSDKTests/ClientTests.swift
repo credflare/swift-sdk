@@ -106,8 +106,9 @@ final class ClientTests: XCTestCase {
     func testLivenessChallengeUploadsAndFacialSubmissionOverHTTP() async throws {
         let client = VerificationSession(try descriptor("capture"))
         let challenge = try await client.createLivenessChallenge()
-        XCTAssertEqual(challenge.challengeID, "01a1fb33-a1ee-71b2-bba9-9f484aa3bb1b")
-        XCTAssertEqual(challenge.gestures, ["blink", "smile", "turn_right"])
+        let issued = (try JSONSerialization.jsonObject(with: fixture("liveness-challenge")) as! [String: Any])["data"] as! [String: Any]
+        XCTAssertEqual(challenge.challengeID, issued["challenge_id"] as? String)
+        XCTAssertEqual(challenge.gestures, issued["gestures"] as? [String])
         XCTAssertTrue(challenge.recordVideo)
         XCTAssertEqual(challenge.maxVideoSeconds, 8)
         XCTAssertNotNil(challenge.expiryDate)
@@ -213,9 +214,10 @@ final class ClientTests: XCTestCase {
     func testFakeProviderLivenessRunUploadsEvidenceAndSubmits() async throws {
         let client = VerificationSession(try descriptor("capture"))
         let issued = try await client.createLivenessChallenge()
-        let capture = try LivenessCapture(challenge: issued, provider: FakeFaceSignalProvider(script: passingScript), clock: { ISO8601.parse("2026-11-20T23:04:00Z")! })
+        let script = scriptPassing(issued.gestures)
+        let capture = try LivenessCapture(challenge: issued, provider: FakeFaceSignalProvider(script: script), clock: { issued.expiryDate!.addingTimeInterval(-60) })
         let buffer = pixelBuffer()
-        for index in passingScript.indices { _ = capture.process(buffer, seconds: Double(index) * 0.066) }
+        for index in script.indices { _ = capture.process(buffer, seconds: Double(index) * 0.066) }
         let video = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
         try Data(repeating: 1, count: 128).write(to: video)
         defer { try? FileManager.default.removeItem(at: video) }

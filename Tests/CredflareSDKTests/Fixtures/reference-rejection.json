@@ -1,5 +1,6 @@
 {
     "success": false,
     "message": "Your location does not meet the place requirement for this verification.",
-    "errors": []
+    "errors": [],
+    "code": "location.reference_not_matched"
 }

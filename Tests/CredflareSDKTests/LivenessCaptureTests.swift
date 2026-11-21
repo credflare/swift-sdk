@@ -33,6 +33,20 @@ let passingScript: [FaceSample] = [face()]
     + [face(yaw: -30), face(yaw: 2)]
     + [FaceSample(t: 0, faces: 0), face()]
 
+func scriptPassing(_ gestures: [String]) -> [FaceSample] {
+    var samples = [face()]
+    for gesture in gestures {
+        switch gesture {
+        case "blink": samples += [face(eye: 0.9), face(eye: 0.1), face(eye: 0.9)]
+        case "smile": samples += Array(repeating: face(smile: 0.9), count: 5)
+        case "turn_left": samples += [face(yaw: 30), face(yaw: 0)]
+        case "turn_right": samples += [face(yaw: -30), face(yaw: 0)]
+        default: samples += [face(pitch: -25), face(pitch: 0)]
+        }
+    }
+    return samples + [FaceSample(t: 0, faces: 0), face()]
+}
+
 let challenge = LivenessChallenge(challengeID: "01a1fb33-a1ee-71b2-bba9-9f484aa3bb1b", gestures: ["blink", "smile", "turn_right"], expiresAt: "2026-11-20T23:05:47.000000Z", recordVideo: true, maxVideoSeconds: 8)
 
 extension LivenessChallenge {

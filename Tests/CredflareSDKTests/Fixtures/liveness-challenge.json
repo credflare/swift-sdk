@@ -2,13 +2,13 @@
     "success": true,
     "message": "Liveness challenge issued",
     "data": {
-        "challenge_id": "01a1fb33-a1ee-71b2-bba9-9f484aa3bb1b",
+        "challenge_id": "01a1fb8d-6c01-7160-a4fe-31853bb8dbdd",
         "gestures": [
-            "blink",
-            "smile",
-            "turn_right"
+            "nod",
+            "turn_right",
+            "turn_left"
         ],
-        "expires_at": "2026-11-20T23:05:47.000000Z",
+        "expires_at": "2026-11-21T00:43:51.000000Z",
         "record_video": true,
         "max_video_seconds": 8
     }

@@ -95,7 +95,11 @@ final class LivenessModel: ObservableObject {
             if let video = evidence.video { try? FileManager.default.removeItem(at: video) }
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, let message) = error { pending = nil; stage = .failed(message) }
+            if LivenessRejection.needsNewChallenge(error) {
+                pending = nil
+                if let video = evidence.video { try? FileManager.default.removeItem(at: video) }
+                stage = .failed(LivenessRejection.message(for: error))
+            }
             else { pending = evidence; stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.errorsSendSelfieFailed)) }
         } catch {
             pending = evidence; stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.errorsSendSelfieFailed))

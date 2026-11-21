@@ -49,7 +49,11 @@ final class LiveBackendTests: XCTestCase {
         var keys: [String: UUID] = [:]
         let id = try await LivenessSubmitter.submit(evidence, client: client, keys: &keys)
         XCTAssertGreaterThan(id, 0)
-        let reused = try? await client.submitFacial(FacialSubmission(challengeID: challenge.challengeID, imageFileID: 1, gestureFileIDs: [1], videoFileID: nil, provider: "vision", livenessResults: [], faceDetection: evidence.faceDetection, capturedAt: ISO8601.format(Date())), key: UUID())
-        XCTAssertNil(reused, "A used challenge must be rejected")
+        do {
+            _ = try await client.submitFacial(FacialSubmission(challengeID: challenge.challengeID, imageFileID: 1, gestureFileIDs: [1], videoFileID: nil, provider: "vision", livenessResults: [], faceDetection: evidence.faceDetection, capturedAt: ISO8601.format(Date())), key: UUID())
+            XCTFail("A used challenge must be rejected")
+        } catch let error as CredflareError {
+            XCTAssertEqual(error.code, .livenessChallengeUsed)
+        }
     }
 }

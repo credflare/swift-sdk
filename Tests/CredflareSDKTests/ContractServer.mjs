@@ -36,6 +36,11 @@ const server = createServer(async (req,res) => {
  const chunks=[];for await(const chunk of req)chunks.push(chunk);
  const body=Buffer.concat(chunks).toString('latin1');
  if(req.url.endsWith('/uploads/documents')){uploadSource=body.includes('name="capture_source"\r\n\r\nupload')?'upload':'unknown';requestKey=req.headers['x-idempotency-key'];}
+ const write = req.method === 'POST' && (req.url.includes('/uploads/') || req.url.endsWith('/submit'));
+ if (write && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.headers['x-idempotency-key'] ?? '')) {
+  res.writeHead(422,{'Content-Type':'application/json'});
+  return res.end(JSON.stringify({success:false,message:'Send an X-Idempotency-Key header with a new UUID for each request, and reuse it only to retry that request.'}));
+ }
  requests.push({method:req.method,path:req.url,key:req.headers['x-idempotency-key'] ?? null,contentType:req.headers['content-type'] ?? null,body:body.length > 4096 ? body.slice(0,4096) : body});
  const [fixture,status] = route(req, token, body);
  res.writeHead(status,{'Content-Type':'application/json'});

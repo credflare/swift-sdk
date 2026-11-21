@@ -165,4 +165,23 @@ final class LivenessCaptureTests: XCTestCase {
         XCTAssertTrue(LivenessCapture.videoSize(width: 720, height: 1280) == (480, 854))
         XCTAssertTrue(LivenessCapture.videoSize(width: 480, height: 640) == (480, 640))
     }
+    func testLivenessRejectionsRestartWithANewChallenge() {
+        for code in [RejectionCode.livenessChallengeExpired, .livenessChallengeInvalid, .livenessChallengeUsed, .livenessFrameOutOfWindow, .livenessGestureMismatch, .livenessVideoTooLong] {
+            XCTAssertTrue(LivenessRejection.needsNewChallenge(.api(422, "server text", code: code)), code.rawValue)
+        }
+        XCTAssertFalse(LivenessRejection.needsNewChallenge(.network("offline")))
+        XCTAssertFalse(LivenessRejection.needsNewChallenge(.api(500, "boom", code: nil)))
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessChallengeExpired)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessFrameOutOfWindow)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessChallengeUsed)), "server text")
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: RejectionCode(rawValue: "liveness.new_rule"))), "server text")
+    }
+
+    func testRejectionCodesCoverTheSpecAndKeepUnknownValues() {
+        XCTAssertEqual(Set(CredflareSpec.ErrorCode.meanings.keys).count, 14)
+        XCTAssertTrue(RejectionCode.locationMock.isKnown)
+        let unknown = RejectionCode(rawValue: "liveness.new_rule")
+        XCTAssertFalse(unknown.isKnown)
+        XCTAssertEqual(CredflareError.api(422, "m", code: unknown).code?.rawValue, "liveness.new_rule")
+    }
 }

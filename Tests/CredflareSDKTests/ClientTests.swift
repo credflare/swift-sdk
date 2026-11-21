@@ -165,6 +165,13 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["challenge"] as! String }, challenge.gestures)
         XCTAssertEqual((metadata["face_detection"] as! [String: Any])["face_count"] as? Int, 1)
         XCTAssertEqual(metadata["captured_at"] as? String, "2026-11-20T23:04:01.000Z")
+        try await assertEveryWriteHasAKey()
+    }
+    func assertEveryWriteHasAKey() async throws {
+        let writes = (try await stats()["requests"] as! [[String: Any]]).filter { ($0["path"] as! String).contains("/uploads/") || ($0["path"] as! String).hasSuffix("/submit") }
+        XCTAssertFalse(writes.isEmpty)
+        for write in writes { XCTAssertNotNil(UUID(uuidString: write["key"] as? String ?? ""), write["path"] as! String) }
+        XCTAssertEqual(Set(writes.map { $0["key"] as! String }).count, writes.count)
     }
     func testBiometricUploadRejectsMismatchedGestureAndFormat() async throws {
         let client = VerificationSession(try descriptor("capture"))
@@ -185,6 +192,7 @@ final class ClientTests: XCTestCase {
         let submits = try await requests("/submit")
         let submit = try XCTUnwrap(submits.first)
         XCTAssertEqual(submit["key"] as? String, key.uuidString.lowercased())
+        try await assertEveryWriteHasAKey()
         let body = try json(submit)
         XCTAssertEqual(body["type"] as? String, "location_verification")
         XCTAssertEqual(body["latitude"] as? Double, 4.0511)
@@ -198,18 +206,33 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual(metadata["captured_at"] as? String, "2026-11-18T11:06:42.000Z")
         XCTAssertNil(body["place"])
     }
-    func testLocationRejectionSurfacesServerReason() async throws {
-        for (token, name) in [("location-reject", "location-rejection"), ("reference-reject", "reference-rejection")] {
+    func testLocationRejectionCarriesTheSpecCode() async throws {
+        let info = try await VerificationSession(try descriptor("capture")).get()
+        let headOffice = try XCTUnwrap(info.profile?.requirements.compactMap(\.location).first?.reference)
+        for (token, name, code, copy) in [
+            ("location-reject", "location-rejection", RejectionCode.locationAccuracy, CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNotPrecise)),
+            ("reference-reject", "reference-rejection", RejectionCode.locationReferenceNotMatched, "You do not seem to be at Head office yet. Move closer, then try again."),
+        ] {
             let expected = (try JSONSerialization.jsonObject(with: fixture(name)) as! [String: Any])["message"] as! String
             do { _ = try await VerificationSession(try descriptor(token)).submitLocation(location(mock: false), key: UUID()); XCTFail("Expected rejection") }
             catch let error as CredflareError {
-                guard case .api(let status, let message) = error else { return XCTFail("Unexpected \(error)") }
+                guard case .api(let status, let message, let parsed) = error else { return XCTFail("Unexpected \(error)") }
                 XCTAssertEqual(status, 422)
                 XCTAssertEqual(message, expected)
+                XCTAssertEqual(parsed, code)
+                XCTAssertTrue(parsed?.isKnown ?? false)
                 XCTAssertEqual(error.type, "validation")
-                XCTAssertEqual(error.localizedDescription, expected)
+                XCTAssertEqual(LocationCopy.rejection(error, reference: headOffice), copy)
             }
         }
+    }
+    func testContractServerRefusesWritesWithoutAKey() async throws {
+        var request = URLRequest(url: base.appendingPathComponent("sdk/sessions/\(try descriptor().sessionID.uuidString.lowercased())/submit"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer capture", forHTTPHeaderField: "Authorization")
+        request.httpBody = Data(#"{"type":"location_verification"}"#.utf8)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 422)
     }
     func testFakeProviderLivenessRunUploadsEvidenceAndSubmits() async throws {
         let client = VerificationSession(try descriptor("capture"))
@@ -236,6 +259,7 @@ final class ClientTests: XCTestCase {
         let metadata = body["metadata"] as! [String: Any]
         XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["challenge"] as! String }, issued.gestures)
         XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["completed"] as! Bool }, [true, true, true])
+        try await assertEveryWriteHasAKey()
     }
     func testDocumentsListNamesOnlyTheStepsThatFollow() throws {
         struct Payload: Decodable { let data: SessionInfo }

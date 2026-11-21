@@ -55,12 +55,17 @@ public enum LocationCopy {
 }
 
 public extension LocationCopy {
-    static let placeMismatchMessage = "Your location does not meet the place requirement for this verification."
-
-    static func rejection(_ message: String, reference: PlaceReference?) -> String {
-        guard let reference, !reference.placeLabels.isEmpty, message == placeMismatchMessage else { return message }
-        let key = reference.rule == .within ? CredflareSpec.CopyKey.locationPlaceNotMatchedWithin : CredflareSpec.CopyKey.locationPlaceNotMatchedOutside
-        return CredflareCopy.text(key, ["place": reference.placeLabels.joined(separator: ", ")])
+    static func rejection(_ error: CredflareError, reference: PlaceReference?) -> String {
+        let fallback = error.localizedDescription
+        switch error.code {
+        case .locationReferenceNotMatched?:
+            guard let reference, !reference.placeLabels.isEmpty else { return fallback }
+            let key = reference.rule == .within ? CredflareSpec.CopyKey.locationPlaceNotMatchedWithin : CredflareSpec.CopyKey.locationPlaceNotMatchedOutside
+            return CredflareCopy.text(key, ["place": reference.placeLabels.joined(separator: ", ")])
+        case .locationMock?: return CredflareCopy.text(CredflareSpec.CopyKey.locationMockDetected)
+        case .locationAccuracy?: return CredflareCopy.text(reference == nil ? CredflareSpec.CopyKey.locationLowAccuracy : CredflareSpec.CopyKey.locationPlaceNotPrecise)
+        default: return fallback
+        }
     }
 }
 

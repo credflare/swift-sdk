@@ -70,8 +70,8 @@ private final class VerificationModel: ObservableObject {
     func show(_ cause: Error, fallback: String = Key.errorsGeneric) {
         if let error = cause as? CredflareError {
             switch error {
-            case .api(401, _): self.error = text(Key.errorsSessionExpired)
-            case .api(422, let message): self.error = message
+            case .api(401, _, _): self.error = text(Key.errorsSessionExpired)
+            case .api(422, let message, _): self.error = message
             case .validation(let message): self.error = message
             case .network: self.error = text(Key.errorsNetwork)
             default: self.error = text(fallback)
@@ -554,7 +554,7 @@ extension VerificationModel {
             case "location_waiting": location.stage = .waiting(improving: true)
             case "location_found": location.stage = .found(fix)
             case "location_error": location.stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.locationLowAccuracy), retry: true)
-            case "location_rejected": location.stage = .failed(LocationCopy.rejection(LocationCopy.placeMismatchMessage, reference: location.settings.reference), retry: true)
+            case "location_rejected": location.stage = .failed(LocationCopy.rejection(.api(422, "", code: .locationReferenceNotMatched), reference: location.settings.reference), retry: true)
             default: break
             }
         case "receipt":

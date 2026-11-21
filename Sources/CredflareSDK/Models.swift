@@ -127,13 +127,35 @@ public struct Evidence: Encodable {
     public init(fileID: Int, source: CaptureSource, side: DocumentSide) { self.fileID = fileID; self.source = source; self.side = side }
     enum CodingKeys: String, CodingKey { case fileID = "file_id", source, side }
 }
+public struct RejectionCode: RawRepresentable, Hashable, Sendable, CustomStringConvertible {
+    public let rawValue: String
+    public init(rawValue: String) { self.rawValue = rawValue }
+    public var isKnown: Bool { CredflareSpec.ErrorCode.meanings[rawValue] != nil }
+    public var description: String { rawValue }
+    public static let locationAccuracy = RejectionCode(rawValue: CredflareSpec.ErrorCode.locationAccuracy)
+    public static let locationStale = RejectionCode(rawValue: CredflareSpec.ErrorCode.locationStale)
+    public static let locationMock = RejectionCode(rawValue: CredflareSpec.ErrorCode.locationMock)
+    public static let locationIpCountry = RejectionCode(rawValue: CredflareSpec.ErrorCode.locationIpCountry)
+    public static let locationReferenceNotMatched = RejectionCode(rawValue: CredflareSpec.ErrorCode.locationReferenceNotMatched)
+    public static let livenessChallengeInvalid = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessChallengeInvalid)
+    public static let livenessChallengeExpired = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessChallengeExpired)
+    public static let livenessChallengeUsed = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessChallengeUsed)
+    public static let livenessGestureMismatch = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessGestureMismatch)
+    public static let livenessFrameOutOfWindow = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessFrameOutOfWindow)
+    public static let livenessNotCamera = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessNotCamera)
+    public static let livenessVideoMissing = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessVideoMissing)
+    public static let livenessVideoTooLong = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessVideoTooLong)
+    public static let livenessVideoUnreadable = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessVideoUnreadable)
+}
+
 public enum CredflareError: LocalizedError {
-    case validation(String), network(String), api(Int, String), invalidResponse
+    case validation(String), network(String), api(Int, String, code: RejectionCode?), invalidResponse
     public var errorDescription: String? {
-        switch self { case .validation(let v), .network(let v), .api(_, let v): return v; case .invalidResponse: return "Credflare returned an invalid response." }
+        switch self { case .validation(let v), .network(let v), .api(_, let v, _): return v; case .invalidResponse: return "Credflare returned an invalid response." }
     }
+    public var code: RejectionCode? { if case .api(_, _, let code) = self { return code }; return nil }
     public var type: String {
-        switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
+        switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
     }
 }
 public enum VerificationResult { case submitted, cancelled, hostActionRequired }

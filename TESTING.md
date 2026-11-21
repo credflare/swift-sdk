@@ -33,3 +33,12 @@ CREDFLARE_DEMO_SESSION_URL=http://localhost:3107/session swift test --filter Liv
 ## Devices
 
 The iOS simulator has no camera, so the camera, Vision analysis and video recording have only run in unit tests with injected providers. Before release, run the facial step on a physical iPhone and confirm the gesture prompts complete for each gesture, the video uploads, and the location step on a device with and without precise location.
+
+## Screen previews
+
+Debug builds of the example accept `-screen <name>` and render that SDK screen with fixture data and no network or camera, which is how every screen is reviewed on the simulator in light and dark. The names are listed in `CredflareVerificationView.previewScreens`:
+
+```sh
+xcrun simctl launch booted net.credflare.swiftdemo -screen liveness_blink
+xcrun simctl io booted screenshot liveness_blink.png
+```

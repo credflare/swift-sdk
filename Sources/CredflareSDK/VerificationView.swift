@@ -26,7 +26,7 @@ private final class VerificationModel: ObservableObject {
     @Published var liveness: LivenessModel?
     @Published var location: LocationModel?
     private var completed: Set<String> = []
-    private var client: VerificationSession?
+    fileprivate var client: VerificationSession?
     private var submissionKey = UUID()
     let makeFaceProvider: () -> FaceSignalProvider
     let makeLocationSource: () -> LocationSource
@@ -79,7 +79,7 @@ private final class VerificationModel: ObservableObject {
         } else { self.error = text(fallback) }
     }
 
-    private func prepareStep() {
+    fileprivate func prepareStep() {
         guard document == nil, documents.isEmpty, let client, let next = nextRequirement else { liveness = nil; location = nil; return }
         if let facial = next.facial, liveness == nil {
             location = nil
@@ -187,7 +187,7 @@ public struct CredflareVerificationView: View {
     private let autoStart: Bool
     private let onResult: (VerificationResult) -> Void
     @Environment(\.colorScheme) private var scheme
-    @StateObject private var model: VerificationModel
+    @StateObject fileprivate var model: VerificationModel
     @State private var autoStarted = false
     @State private var importing = false
     @State private var camera = false
@@ -473,6 +473,98 @@ private struct CameraPicker: UIViewControllerRepresentable {
         init(_ completion: @escaping (UIImage?) -> Void) { self.completion = completion }
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { completion(nil) }
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) { completion(info[.originalImage] as? UIImage) }
+    }
+}
+#endif
+
+#if DEBUG && canImport(UIKit)
+extension CredflareVerificationView {
+    public static let previewScreens = [
+        "intro", "documents", "capture", "capture_selected", "review",
+        "liveness_intro", "liveness_starting", "liveness_positioning", "liveness_blink", "liveness_smile", "liveness_turn_left", "liveness_turn_right", "liveness_nod", "liveness_face_lost", "liveness_timeout", "liveness_sending",
+        "location_consent", "location_waiting", "location_found", "location_error", "location_rejected",
+        "receipt", "receipt_host_steps",
+    ]
+
+    public init(previewScreen: String) {
+        self.init(sessionProvider: { throw CancellationError() }, faceSignalProvider: { VisionFaceSignalProvider() }, locationSource: { DeviceLocationSource() }, onResult: { _ in })
+        _model = StateObject(wrappedValue: VerificationModel.preview(previewScreen))
+    }
+}
+
+extension VerificationModel {
+    static func previewSession(documents: Bool, requirements: [String], form: Bool) -> SessionInfo {
+        let document = #"{"document_type":{"id":1,"name":"Demo identity document","two_sided":true,"capture_method":"camera"},"capture_method":"snapshot_or_upload","group_key":null,"rule":"all_of","min_required":null,"remaining_required":1,"requested_sides":["front","back"]}"#
+        let facial = #"{"verification_type":"facial_verification","settings":{"gestures":["blink","smile","turn_left","turn_right","nod"],"gesture_count":3,"record_video":true,"video_retention_days":30}}"#
+        let location = #"{"verification_type":"location_verification","settings":{"max_accuracy_m":50,"max_age_s":60,"mock_location":"reject","ip_country":"flag","reference":{"rule":"within","places":[{"label":"Head office"}]}}}"#
+        let verification = requirements.map { $0 == "facial" ? facial : location }.joined(separator: ",")
+        let json = #"{"session_id":"01a1fb33-a1d0-7081-aa9e-7ce29c2a41d8","environment":"sandbox","custom_message":null,"requester":{"name":"SDK's Workspace","logo_url":null},"upload_limits":{"max_file_size_bytes":10485760,"allowed_file_types":["jpg","png","webp","pdf"]},"profile":{"form_schema":"# + (form ? #"[{"key":"full_name","label":"Full name","type":"text","required":true}]"# : "null") + #","verification_requirements":["# + verification + #"],"document_requirements":["# + (documents ? document : "") + "]}}"
+        return try! JSONDecoder().decode(SessionInfo.self, from: Data(json.utf8))
+    }
+
+    static func previewPhoto() -> Data {
+        UIGraphicsImageRenderer(size: CGSize(width: 860, height: 540)).image { context in
+            UIColor(white: 0.85, alpha: 1).setFill(); context.fill(CGRect(x: 0, y: 0, width: 860, height: 540))
+            UIColor(white: 0.6, alpha: 1).setFill(); context.fill(CGRect(x: 60, y: 120, width: 220, height: 280))
+            UIColor(white: 0.7, alpha: 1).setFill()
+            for row in 0..<5 { context.fill(CGRect(x: 330, y: 140 + row * 52, width: 460 - row * 40, height: 22)) }
+        }.jpegData(compressionQuality: 0.8)!
+    }
+
+    static func preview(_ screen: String) -> VerificationModel {
+        let model = VerificationModel(makeFaceProvider: { VisionFaceSignalProvider() }, makeLocationSource: { DeviceLocationSource() })
+        let descriptor = try! SessionDescriptor(sessionID: UUID(uuidString: "01a1fb33-a1d0-7081-aa9e-7ce29c2a41d8")!, token: "preview", apiBaseURL: URL(string: "http://127.0.0.1:9/api/v1")!, expiresAt: "2026-11-20T23:33:47.000000Z")
+        model.client = VerificationSession(descriptor)
+        let part = screen.split(separator: "_").first.map(String.init) ?? screen
+        switch part {
+        case "intro": return model
+        case "documents", "capture", "review":
+            model.info = previewSession(documents: true, requirements: ["facial"], form: true)
+            if part == "documents" { return model }
+            model.open(model.documents[0])
+            if screen == "capture" { return model }
+            let photo = previewPhoto()
+            model.captures[model.steps[0].id] = Capture(data: photo, name: "camera.jpg", source: .camera)
+            if screen == "capture_selected" { return model }
+            for step in model.steps { model.captures[step.id] = Capture(data: photo, name: "camera.jpg", source: .camera) }
+            model.index = model.steps.count
+        case "liveness":
+            model.info = previewSession(documents: false, requirements: ["facial", "location"], form: false)
+            model.prepareStep()
+            guard let liveness = model.liveness else { return model }
+            let hint: (String) -> String = { CredflareCopy.text($0) }
+            switch screen {
+            case "liveness_starting": liveness.stage = .preparing
+            case "liveness_positioning": liveness.stage = .running; liveness.recording = true; liveness.current = 1; liveness.hint = hint(PositionStatus.tooSmall.copyKey)
+            case "liveness_blink", "liveness_smile", "liveness_turn_left", "liveness_turn_right", "liveness_nod":
+                let gesture = String(screen.dropFirst("liveness_".count))
+                liveness.stage = .running; liveness.recording = true
+                liveness.current = ["blink": 1, "smile": 2, "turn_left": 3, "turn_right": 3, "nod": 3][gesture]!
+                liveness.hint = hint(LivenessSequence.promptKey(for: gesture))
+            case "liveness_face_lost": liveness.stage = .running; liveness.recording = true; liveness.current = 2; liveness.hint = hint(CredflareSpec.CopyKey.livenessFaceLost)
+            case "liveness_timeout": liveness.stage = .failed(hint(CredflareSpec.CopyKey.livenessTimeout))
+            case "liveness_sending": liveness.stage = .sending
+            default: break
+            }
+        case "location":
+            model.info = previewSession(documents: false, requirements: ["location"], form: false)
+            model.prepareStep()
+            guard let location = model.location else { return model }
+            let fix = LocationFix(latitude: 4.05112, longitude: 9.76791, accuracy: 12, altitude: nil, timestamp: Date(timeIntervalSince1970: 1_795_000_000), isMock: nil)
+            switch screen {
+            case "location_waiting": location.stage = .waiting(improving: true)
+            case "location_found": location.stage = .found(fix)
+            case "location_error": location.stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.locationLowAccuracy), retry: true)
+            case "location_rejected": location.stage = .failed("Your location does not meet the place requirement for this verification.", retry: true)
+            default: break
+            }
+        case "receipt":
+            let host = screen == "receipt_host_steps"
+            model.info = previewSession(documents: false, requirements: [], form: host)
+            model.received = [CredflareCopy.text(CredflareSpec.CopyKey.receiptDocument, ["document": "Demo identity document"]), CredflareCopy.text(CredflareSpec.CopyKey.receiptSelfie), CredflareCopy.text(CredflareSpec.CopyKey.receiptLocation)]
+        default: break
+        }
+        return model
     }
 }
 #endif

@@ -135,13 +135,17 @@ struct LivenessView: View {
             case .running:
                 ThemedText(CredflareCopy.text(CredflareSpec.CopyKey.livenessProgress, ["current": String(max(model.current, 1)), "total": String(model.total)]), style: CredflareSpec.Tokens.typeEyebrow, tone: \.muted)
                 ZStack(alignment: .top) {
-                    if let session = model.session {
-                        CameraPreview(session: session)
-                            .aspectRatio(3 / 4, contentMode: .fit)
-                            .clipShape(RoundedRectangle(cornerRadius: CGFloat(CredflareSpec.Tokens.radiusXl)))
-                            .overlay(Ellipse().stroke(theme.onPrimary.opacity(0.9), lineWidth: 3).padding(.horizontal, 48).padding(.vertical, 40))
-                            .accessibilityLabel(CredflareCopy.text(CredflareSpec.CopyKey.selfiePreviewLabel))
+                    Group {
+                        if let session = model.session {
+                            CameraPreview(session: session)
+                        } else {
+                            theme.soft.overlay(SpecIconView(CredflareSpec.Icons.camera, color: theme.muted, size: CGFloat(CredflareSpec.Tokens.sizeIllustration)))
+                        }
                     }
+                    .aspectRatio(3 / 4, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: CGFloat(CredflareSpec.Tokens.radiusXl)))
+                    .overlay(Ellipse().stroke(Color(argb: CredflareSpec.Tokens.light.surface).opacity(0.9), lineWidth: 3).padding(.horizontal, 48).padding(.vertical, 40))
+                    .accessibilityLabel(CredflareCopy.text(CredflareSpec.CopyKey.selfiePreviewLabel))
                     if model.recording {
                         HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingXs)) {
                             Circle().fill(theme.error).frame(width: 8, height: 8)
@@ -156,6 +160,8 @@ struct LivenessView: View {
             case .sending:
                 LoadingBlock(label: CredflareCopy.text(CredflareSpec.CopyKey.livenessSending))
             case .failed(let message):
+                SpecIconView(CredflareSpec.Icons.selfie, color: theme.primary, size: CGFloat(CredflareSpec.Tokens.sizeIllustration))
+                TitleText(CredflareCopy.text(CredflareSpec.CopyKey.livenessTitle))
                 ErrorBox(message: message)
                 PrimaryButton(CredflareCopy.text(CredflareSpec.CopyKey.livenessRetry)) { Task { await model.start() } }
             }

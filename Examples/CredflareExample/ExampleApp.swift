@@ -3,7 +3,19 @@ import CredflareSDK
 
 @main
 struct CredflareExampleApp: App {
-    var body: some Scene { WindowGroup { DemoView() } }
+    var body: some Scene {
+        WindowGroup {
+            #if DEBUG
+            if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-screen"), index + 1 < ProcessInfo.processInfo.arguments.count {
+                CredflareVerificationView(previewScreen: ProcessInfo.processInfo.arguments[index + 1])
+            } else {
+                DemoView()
+            }
+            #else
+            DemoView()
+            #endif
+        }
+    }
 }
 struct DemoView: View {
     @State private var presenting = false

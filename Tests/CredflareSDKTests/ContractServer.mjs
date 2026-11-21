@@ -2,7 +2,7 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 const fixtures = process.argv[2];
-let redirectHits = 0, uploadSource = '', requestKey = '';
+let redirectHits = 0, uploadSource = '', requestKey = '', droppedSubmit = false;
 const requests = [];
 const trap = createServer((req,res) => { redirectHits++; res.end('{}'); }).listen(0,'127.0.0.1');
 const sessions = {'Bearer selfie':'facial-session','Bearer capture':'capture-session','Bearer combined':'combined-session'};
@@ -42,6 +42,7 @@ const server = createServer(async (req,res) => {
   return res.end(JSON.stringify({success:false,message:'Send an X-Idempotency-Key header with a new UUID for each request, and reuse it only to retry that request.'}));
  }
  requests.push({method:req.method,path:req.url,key:req.headers['x-idempotency-key'] ?? null,contentType:req.headers['content-type'] ?? null,body:body.length > 4096 ? body.slice(0,4096) : body});
+ if (token === 'Bearer drop-submit' && req.url.endsWith('/submit') && !droppedSubmit) {droppedSubmit = true;return req.socket.destroy();}
  const rejection = /^Bearer reject:([a-z_.]+)$/.exec(token ?? '');
  if (rejection && req.url.endsWith('/submit')) {res.writeHead(422,{'Content-Type':'application/json'});return res.end(await readFile(join(fixtures,'rejections',rejection[1]+'.json')));}
  const [fixture,status] = route(req, token, body);

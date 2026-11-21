@@ -261,6 +261,38 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["completed"] as! Bool }, [true, true, true])
         try await assertEveryWriteHasAKey()
     }
+    func testDroppedLivenessSubmitRetriesWithTheSameKeysAndANewChallengeGetsNewKeys() async throws {
+        let client = VerificationSession(try descriptor("drop-submit"))
+        func evidence() async throws -> LivenessEvidence {
+            let issued = try await client.createLivenessChallenge()
+            let script = scriptPassing(issued.gestures)
+            let capture = try LivenessCapture(challenge: issued, provider: FakeFaceSignalProvider(script: script), clock: { issued.expiryDate!.addingTimeInterval(-60) })
+            let buffer = pixelBuffer()
+            for index in script.indices { _ = capture.process(buffer, seconds: Double(index) * 0.066) }
+            let video = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).mp4")
+            try Data(repeating: 1, count: 128).write(to: video)
+            addTeardownBlock { try? FileManager.default.removeItem(at: video) }
+            return try XCTUnwrap(capture.evidence(video: video))
+        }
+        func writeKeys() async throws -> [String] {
+            (try await stats()["requests"] as! [[String: Any]]).filter { ($0["path"] as! String).contains("/uploads/") || ($0["path"] as! String).hasSuffix("/submit") }.map { $0["key"] as! String }
+        }
+        let first = try await evidence()
+        var keys: [String: UUID] = [:]
+        do { _ = try await LivenessSubmitter.submit(first, client: client, keys: &keys); XCTFail("The first submit was not dropped") } catch {}
+        let dropped = try await writeKeys()
+        XCTAssertEqual(dropped.count, 6)
+        XCTAssertEqual(dropped.last, keys["submit"]?.uuidString.lowercased())
+        let id = try await LivenessSubmitter.submit(first, client: client, keys: &keys)
+        XCTAssertEqual(id, 1)
+        let retried = Array(try await writeKeys().dropFirst(dropped.count))
+        XCTAssertEqual(retried, dropped)
+        var fresh: [String: UUID] = [:]
+        _ = try await LivenessSubmitter.submit(try await evidence(), client: client, keys: &fresh)
+        let next = Array(try await writeKeys().dropFirst(dropped.count + retried.count))
+        XCTAssertEqual(next.count, 6)
+        XCTAssertTrue(Set(next).isDisjoint(with: dropped))
+    }
     func testDocumentsListNamesOnlyTheStepsThatFollow() throws {
         struct Payload: Decodable { let data: SessionInfo }
         func profile(_ name: String) throws -> SessionInfo.Profile { try XCTUnwrap(JSONDecoder().decode(Payload.self, from: fixture(name)).data.profile) }

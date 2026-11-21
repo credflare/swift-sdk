@@ -46,6 +46,15 @@ final class LocationTests: XCTestCase {
         XCTAssertTrue(source.stopped)
     }
 
+    func testFlaggedMocksAreAcceptedAndStaleFixesAreSkipped() async throws {
+        let flagged = LocationSettings(try JSONDecoder().decode(JSONValue.self, from: Data(#"{"max_accuracy_m":50,"max_age_s":60,"mock_location":"flag"}"#.utf8)))
+        XCTAssertEqual(flagged.evaluate(fix(accuracy: 12, mock: true), now: now), .accepted)
+        let source = FakeLocationSource(script: [fix(accuracy: 10, age: 61), fix(accuracy: 20)])
+        let now = self.now
+        let outcome = await LocationCollector.collect(from: source, settings: try settings(), timeout: 2, now: { now })
+        XCTAssertEqual(outcome, .fix(fix(accuracy: 20)))
+    }
+
     func testCollectorReportsDeniedTimeoutLowAccuracyAndMock() async throws {
         let location = try settings()
         let now = self.now

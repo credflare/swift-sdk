@@ -1,0 +1,70 @@
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": {
+    "session_id": "01a1f911-78ef-70b7-8ebc-4651850380c5",
+    "expires_at": "2026-11-20T13:37:14.000000Z",
+    "status": "pending",
+    "environment": "sandbox",
+    "custom_message": null,
+    "requester": {
+      "name": "SDK's Workspace",
+      "logo_url": null
+    },
+    "brand": null,
+    "upload_limits": {
+      "max_file_size_bytes": 10485760,
+      "allowed_file_types": [
+        "jpg",
+        "png",
+        "webp",
+        "pdf"
+      ],
+      "max_uploads_per_requirement": 5
+    },
+    "profile": {
+      "name": "SDK demo either",
+      "form_schema": null,
+      "verification_requirements": [],
+      "document_requirements": [
+        {
+          "document_type": {
+            "id": 1,
+            "name": "Demo identity document",
+            "description": null,
+            "has_expiration_date": false,
+            "has_issue_date": false,
+            "has_document_number": false,
+            "has_issuing_authority": false,
+            "has_issuing_country": false,
+            "has_holder_name": true,
+            "has_holder_dob": false,
+            "has_holder_address": false,
+            "supports_multiple_pages": false,
+            "two_sided": true,
+            "capture_method": "camera",
+            "category": "document",
+            "is_active": true,
+            "created_at": "2026-11-20T12:27:44.000000Z",
+            "updated_at": "2026-11-20T12:27:44.000000Z",
+            "deleted_at": null
+          },
+          "capture_method": "snapshot_or_upload",
+          "group_key": null,
+          "rule": "all_of",
+          "min_required": null,
+          "remaining_required": 1,
+          "requested_sides": [
+            "front",
+            "back"
+          ]
+        }
+      ]
+    },
+    "capabilities": {
+      "trusted_camera": false,
+      "liveness": false,
+      "deepfake_detection": false
+    }
+  }
+}

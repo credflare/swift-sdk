@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Send the time of the location fix.",
+    "errors": [],
+    "code": "location.stale"
+}

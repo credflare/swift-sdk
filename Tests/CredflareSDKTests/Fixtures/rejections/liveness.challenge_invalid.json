@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "This liveness challenge is not active. Start the liveness check again.",
+    "errors": [],
+    "code": "liveness.challenge_invalid"
+}

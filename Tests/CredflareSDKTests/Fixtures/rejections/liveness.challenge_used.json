@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "This liveness challenge was already used. Start the liveness check again.",
+    "errors": [],
+    "code": "liveness.challenge_used"
+}

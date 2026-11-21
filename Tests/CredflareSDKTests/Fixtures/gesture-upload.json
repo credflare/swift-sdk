@@ -1,0 +1,11 @@
+{
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+        "id": 3,
+        "filename": "verification_6b00e8cfd93458.22226736_1795221711.jpg",
+        "original_name": "turn_left.jpg",
+        "mime_type": "image/jpeg",
+        "size": 2291
+    }
+}

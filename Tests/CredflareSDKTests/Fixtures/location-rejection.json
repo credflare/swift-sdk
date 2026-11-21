@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "The location is not accurate enough. Move to an open area and try again.",
+    "errors": [],
+    "code": "location.accuracy"
+}

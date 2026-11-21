@@ -1,0 +1,15 @@
+{
+    "success": true,
+    "message": "Liveness challenge issued",
+    "data": {
+        "challenge_id": "01a1fb8d-6c01-7160-a4fe-31853bb8dbdd",
+        "gestures": [
+            "nod",
+            "turn_right",
+            "turn_left"
+        ],
+        "expires_at": "2026-11-21T00:43:51.000000Z",
+        "record_video": true,
+        "max_video_seconds": 8
+    }
+}

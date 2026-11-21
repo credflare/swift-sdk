@@ -1,0 +1,11 @@
+{
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+        "id": 1,
+        "filename": "verification_6b00856ee05c89.01795264_1795196270.jpg",
+        "original_name": "selfie.jpg",
+        "mime_type": "image/jpeg",
+        "size": 7091
+    }
+}

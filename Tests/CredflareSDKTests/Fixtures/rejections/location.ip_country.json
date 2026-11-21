@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Your network location does not match the shared location.",
+    "errors": [],
+    "code": "location.ip_country"
+}

@@ -1,0 +1,11 @@
+{
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+        "id": 5,
+        "filename": "verification_6b00e8cfe04229.26522886_1795221711.mp4",
+        "original_name": "clip.mp4",
+        "mime_type": "video/mp4",
+        "size": 4061
+    }
+}

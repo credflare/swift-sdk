@@ -64,6 +64,8 @@ public extension LocationCopy {
             return CredflareCopy.text(key, ["place": reference.placeLabels.joined(separator: ", ")])
         case .locationMock?: return CredflareCopy.text(CredflareSpec.CopyKey.locationMockDetected)
         case .locationAccuracy?: return CredflareCopy.text(reference == nil ? CredflareSpec.CopyKey.locationLowAccuracy : CredflareSpec.CopyKey.locationPlaceNotPrecise)
+        case .locationStale?: return CredflareCopy.text(CredflareSpec.CopyKey.locationStale)
+        case .locationIpCountry?: return CredflareCopy.text(CredflareSpec.CopyKey.locationIpCountryMismatch)
         default: return fallback
         }
     }

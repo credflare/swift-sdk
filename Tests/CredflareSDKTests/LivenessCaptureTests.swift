@@ -173,7 +173,9 @@ final class LivenessCaptureTests: XCTestCase {
         XCTAssertFalse(LivenessRejection.needsNewChallenge(.api(500, "boom", code: nil)))
         XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessChallengeExpired)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
         XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessFrameOutOfWindow)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
-        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessChallengeUsed)), "server text")
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessChallengeUsed)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessChallengeInvalid)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: .livenessGestureMismatch)), "server text")
         XCTAssertEqual(LivenessRejection.message(for: .api(422, "server text", code: RejectionCode(rawValue: "liveness.new_rule"))), "server text")
     }
 

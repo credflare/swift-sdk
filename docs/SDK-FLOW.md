@@ -15,12 +15,12 @@
    5. A JPEG frame is kept when each gesture completes. When the challenge records video, an H.264 mp4 scaled to 480 pixels on the short edge, with no audio, is written for at most `max_video_seconds`.
    6. Once the next frame is centred and neutral, a full resolution photo is taken on the same camera session and scaled to at most 1600 pixels on the long edge. If the photo fails, that analysed frame is used instead.
    7. Uploads: one `gesture` frame per gesture, the `liveness_video`, then the `selfie`, each with the challenge ID, `capture_source=camera` and its own idempotency key. Then the facial submission.
-   8. Timeout, expiry or a rejected submission shows the reason and a retry that requests a new challenge. Rejections are read from the response `code`: `liveness.challenge_expired` and `liveness.frame_out_of_window` show the expiry copy, other codes show the server's message. A network failure while sending retries the same uploads with the same keys.
+   8. Timeout, expiry or a rejected submission shows the reason and a retry that requests a new challenge. Rejections are read from the response `code`: the challenge codes (`liveness.challenge_expired`, `liveness.challenge_invalid`, `liveness.challenge_used`, `liveness.frame_out_of_window`) show the expiry copy, other codes show the server's message. A network failure while sending retries the same uploads with the same keys.
 5. **Location step** (when the profile has `location_verification`).
    1. Consent with the spec copy. With a reference place the title and requirement name the place labels only.
    2. When in use permission, then Core Location updates at best accuracy until a fix is within `max_accuracy_m` and younger than `max_age_s`, or `fix_timeout_s` passes.
    3. The applicant reviews accuracy, coordinates and time, then sends. `is_mock` comes from `sourceInformation.isSimulatedBySoftware` and is `null` when iOS gives no source information. Provider is `gps`.
-   4. A `422` is read from its `code`: `location.reference_not_matched` names the place with the spec copy, `location.mock` and `location.accuracy` use their spec copy, and other codes show the server's message. Each offers a retry with a new fix and a new idempotency key. After `retry_attempts` failed fixes the screen asks the applicant to contact the requester.
+   4. A `422` is read from its `code`: `location.reference_not_matched` names the place with the spec copy, `location.mock`, `location.accuracy`, `location.stale` and `location.ip_country` use their spec copy, and other codes show the server's message. Each offers a retry with a new fix and a new idempotency key. After `retry_attempts` failed fixes the screen asks the applicant to contact the requester.
 6. **Receipt.** Lists each item received in this session. Form fields still needed return control to the host with `hostActionRequired`.
 
 ## Face signals

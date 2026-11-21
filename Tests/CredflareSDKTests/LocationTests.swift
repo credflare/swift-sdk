@@ -97,7 +97,9 @@ final class LocationTests: XCTestCase {
         XCTAssertEqual(LocationCopy.rejection(.api(422, "server text", code: .locationMock), reference: nil), CredflareCopy.text(CredflareSpec.CopyKey.locationMockDetected))
         XCTAssertEqual(LocationCopy.rejection(.api(422, "server text", code: .locationAccuracy), reference: nil), CredflareCopy.text(CredflareSpec.CopyKey.locationLowAccuracy))
         XCTAssertEqual(LocationCopy.rejection(.api(422, "server text", code: .locationAccuracy), reference: headOffice), CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNotPrecise))
-        for code in [RejectionCode.locationStale, .locationIpCountry, RejectionCode(rawValue: "location.something_new")] {
+        XCTAssertEqual(LocationCopy.rejection(.api(422, "server text", code: .locationStale), reference: headOffice), CredflareCopy.text(CredflareSpec.CopyKey.locationStale))
+        XCTAssertEqual(LocationCopy.rejection(.api(422, "server text", code: .locationIpCountry), reference: nil), CredflareCopy.text(CredflareSpec.CopyKey.locationIpCountryMismatch))
+        for code in [RejectionCode(rawValue: "location.something_new")] {
             XCTAssertEqual(LocationCopy.rejection(.api(422, "server text", code: code), reference: headOffice), "server text", code.rawValue)
         }
         XCTAssertEqual(LocationCopy.rejection(.api(422, "Your location does not meet the place requirement for this verification.", code: nil), reference: headOffice), "Your location does not meet the place requirement for this verification.")

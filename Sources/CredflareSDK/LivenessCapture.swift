@@ -124,7 +124,7 @@ public enum LivenessRejection {
 
     public static func message(for error: CredflareError) -> String {
         switch error.code {
-        case .livenessChallengeExpired?, .livenessFrameOutOfWindow?: return CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired)
+        case let code? where restartCodes.contains(code): return CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired)
         default: return error.localizedDescription
         }
     }

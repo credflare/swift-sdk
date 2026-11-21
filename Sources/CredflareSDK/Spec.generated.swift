@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.0.0 (13c02ea43d7a). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.0.0 (ef15c85fc748). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -59,7 +59,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.0.0"
-    public static let hash = "13c02ea43d7a"
+    public static let hash = "ef15c85fc748"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -544,6 +544,8 @@ public enum CredflareSpec {
             "location.timeout": "We could not find your location in time. Try again.",
             "location.low_accuracy": "Your location is not accurate enough yet. Move near a window or outside, then try again.",
             "location.mock_detected": "An app or setting is changing your device location. Turn it off, then try again.",
+            "location.stale": "Your location reading is out of date. Try again to take a new one.",
+            "location.ip_country_mismatch": "Your internet connection seems to be in a different country from your location. Turn off any VPN or proxy, then try again.",
             "location.retry": "Try again",
             "location.retries_exhausted": "We could not get your location. Contact {verifier}.",
             "location.place.title_within": "Share your location at {place}",
@@ -728,6 +730,8 @@ public enum CredflareSpec {
         public static let locationTimeout: String = "location.timeout"
         public static let locationLowAccuracy: String = "location.low_accuracy"
         public static let locationMockDetected: String = "location.mock_detected"
+        public static let locationStale: String = "location.stale"
+        public static let locationIpCountryMismatch: String = "location.ip_country_mismatch"
         public static let locationRetry: String = "location.retry"
         public static let locationRetriesExhausted: String = "location.retries_exhausted"
         public static let locationPlaceTitleWithin: String = "location.place.title_within"

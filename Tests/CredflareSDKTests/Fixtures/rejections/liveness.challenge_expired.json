@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "This liveness challenge has expired. Start the liveness check again.",
+    "errors": [],
+    "code": "liveness.challenge_expired"
+}

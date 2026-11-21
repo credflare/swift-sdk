@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "The liveness video could not be read. Record it again.",
+    "errors": [],
+    "code": "liveness.video_unreadable"
+}

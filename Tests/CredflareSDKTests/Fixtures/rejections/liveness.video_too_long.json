@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "The liveness video is longer than 8 seconds. Record it again.",
+    "errors": [],
+    "code": "liveness.video_too_long"
+}

@@ -269,4 +269,56 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual(try profile("capture-session").stepsAfterDocuments, ["facial_verification", "location_verification"])
         XCTAssertEqual(try profile("capture-session").nextStepsCopyKey, CredflareSpec.CopyKey.documentsSelfieLocationNext)
     }
+    func testEveryBackendRejectionMapsToItsApplicantCopy() async throws {
+        let headOffice = try XCTUnwrap(PlaceReference(try JSONDecoder().decode(JSONValue.self, from: Data(#"{"rule":"within","match":"any","places":[{"label":"Head office"}]}"#.utf8))))
+        let expired = CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired)
+        let expected: [String: String?] = [
+            "location.accuracy": CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNotPrecise),
+            "location.stale": CredflareCopy.text(CredflareSpec.CopyKey.locationStale),
+            "location.mock": CredflareCopy.text(CredflareSpec.CopyKey.locationMockDetected),
+            "location.ip_country": CredflareCopy.text(CredflareSpec.CopyKey.locationIpCountryMismatch),
+            "location.reference_not_matched": "You do not seem to be at Head office yet. Move closer, then try again.",
+            "liveness.challenge_invalid": expired,
+            "liveness.challenge_expired": expired,
+            "liveness.challenge_used": expired,
+            "liveness.frame_out_of_window": expired,
+            "liveness.gesture_mismatch": nil,
+            "liveness.not_camera": nil,
+            "liveness.video_missing": nil,
+            "liveness.video_too_long": nil,
+            "liveness.video_unreadable": nil,
+        ]
+        let directory = Bundle.module.url(forResource: "rejections", withExtension: nil, subdirectory: "Fixtures")!
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).filter { $0.pathExtension == "json" }
+        XCTAssertEqual(Set(files.map { $0.deletingPathExtension().lastPathComponent }), Set(CredflareSpec.ErrorCode.meanings.keys))
+        XCTAssertEqual(Set(expected.keys), Set(CredflareSpec.ErrorCode.meanings.keys))
+        for file in files {
+            let name = file.deletingPathExtension().lastPathComponent
+            let message = (try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: Any])["message"] as! String
+            let client = VerificationSession(try descriptor("reject:\(name)"))
+            do {
+                if name.hasPrefix("location.") { _ = try await client.submitLocation(location(mock: false), key: UUID()) }
+                else { _ = try await client.submitFacial(FacialSubmission(challengeID: "01a1fb8d-6c01-7160-a4fe-31853bb8dbdd", imageFileID: 4, gestureFileIDs: [3], videoFileID: 5, provider: "vision", livenessResults: [], faceDetection: FaceDetectionSummary(detected: true, faceCount: 1, isCentered: true, isCorrectSize: true), capturedAt: "2026-11-21T00:43:00.000Z"), key: UUID()) }
+                XCTFail("\(name) was not rejected")
+            } catch let error as CredflareError {
+                XCTAssertEqual(error.code?.rawValue, name)
+                XCTAssertTrue(error.code?.isKnown ?? false, name)
+                XCTAssertEqual(error.type, "validation", name)
+                let copy = expected[name]!
+                if name.hasPrefix("location.") {
+                    XCTAssertEqual(LocationCopy.rejection(error, reference: headOffice), copy ?? message, name)
+                    if name == "location.reference_not_matched" {
+                        let depot = try XCTUnwrap(PlaceReference(try JSONDecoder().decode(JSONValue.self, from: Data(#"{"rule":"outside","places":[{"label":"Depot"}]}"#.utf8))))
+                        XCTAssertEqual(LocationCopy.rejection(error, reference: depot), "You seem to be too close to Depot. Move away, then try again.")
+                        XCTAssertEqual(LocationCopy.rejection(error, reference: nil), message)
+                    }
+                    if name == "location.accuracy" { XCTAssertEqual(LocationCopy.rejection(error, reference: nil), CredflareCopy.text(CredflareSpec.CopyKey.locationLowAccuracy)) }
+                } else {
+                    XCTAssertTrue(LivenessRejection.needsNewChallenge(error), name)
+                    XCTAssertFalse(LivenessRejection.needsNewChallenge(.network("offline")))
+                    XCTAssertEqual(LivenessRejection.message(for: error), copy ?? message, name)
+                }
+            }
+        }
+    }
 }

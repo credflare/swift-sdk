@@ -18,6 +18,7 @@ xcodebuild -project Examples/CredflareExample.xcodeproj -scheme CredflareExample
 | Gesture engine | `EngineTests` replays every trace in `Fixtures/liveness-traces` and checks the face lost reset and provider override rules |
 | Liveness logic | `LivenessCaptureTests` drives the challenge with a fake face signal provider: gesture order, position hints, frame capture, timeout, expiry and the Vision sign conventions |
 | Location | `LocationTests` covers accuracy, age and mock checks, the fix collector with a fake source, the submission body and place copy built from labels only |
+| Rejections | `ClientTests` replays the real backend 422 for every code in `Fixtures/rejections` through the client and checks the applicant copy each one maps to |
 | Spec | `SpecTests` parses every icon path and checks copy placeholders and tokens |
 
 The Vision sign test uses a portrait photo from the sibling `website` repository and is skipped when it is missing.

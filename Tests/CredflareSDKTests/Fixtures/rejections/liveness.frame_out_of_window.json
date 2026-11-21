@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "A capture was taken outside the time allowed for this liveness challenge. Start the liveness check again.",
+    "errors": [],
+    "code": "liveness.frame_out_of_window"
+}

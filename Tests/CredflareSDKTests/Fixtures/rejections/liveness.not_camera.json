@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Liveness evidence must come from the camera.",
+    "errors": [],
+    "code": "liveness.not_camera"
+}

@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Send the accuracy of the location fix.",
+    "errors": [],
+    "code": "location.accuracy"
+}

@@ -42,6 +42,8 @@ const server = createServer(async (req,res) => {
   return res.end(JSON.stringify({success:false,message:'Send an X-Idempotency-Key header with a new UUID for each request, and reuse it only to retry that request.'}));
  }
  requests.push({method:req.method,path:req.url,key:req.headers['x-idempotency-key'] ?? null,contentType:req.headers['content-type'] ?? null,body:body.length > 4096 ? body.slice(0,4096) : body});
+ const rejection = /^Bearer reject:([a-z_.]+)$/.exec(token ?? '');
+ if (rejection && req.url.endsWith('/submit')) {res.writeHead(422,{'Content-Type':'application/json'});return res.end(await readFile(join(fixtures,'rejections',rejection[1]+'.json')));}
  const [fixture,status] = route(req, token, body);
  res.writeHead(status,{'Content-Type':'application/json'});
  res.end(await readFile(join(fixtures,fixture+'.json')));

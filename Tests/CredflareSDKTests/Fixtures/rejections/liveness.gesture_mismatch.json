@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "This gesture is not part of the liveness challenge.",
+    "errors": [],
+    "code": "liveness.gesture_mismatch"
+}

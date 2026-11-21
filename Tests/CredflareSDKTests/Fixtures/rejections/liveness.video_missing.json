@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Record the liveness video for this challenge.",
+    "errors": [],
+    "code": "liveness.video_missing"
+}

@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Turn off mock locations and share your real location.",
+    "errors": [],
+    "code": "location.mock"
+}

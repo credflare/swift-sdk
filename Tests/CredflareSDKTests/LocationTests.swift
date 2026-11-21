@@ -72,7 +72,7 @@ final class LocationTests: XCTestCase {
     func testPlaceCopyUsesLabelsOnly() throws {
         let headOffice = try XCTUnwrap(try settings().reference)
         XCTAssertEqual(LocationCopy.title(headOffice), "Share your location at Head office")
-        XCTAssertEqual(LocationCopy.requirement(headOffice), "You need to be at Head office.")
+        XCTAssertNil(LocationCopy.requirement(headOffice))
         XCTAssertEqual(LocationCopy.title(nil), "Share your location")
         XCTAssertNil(LocationCopy.requirement(nil))
         func reference(_ json: String) throws -> PlaceReference {
@@ -87,6 +87,14 @@ final class LocationTests: XCTestCase {
         XCTAssertEqual(LocationCopy.requirement(all), "You need to be at each of these places: Depot, Yard.")
         let any = try reference(#"{"rule":"within","places":[{"label":"Depot"},{"label":"Yard"}]}"#)
         XCTAssertEqual(LocationCopy.requirement(any), "You need to be at one of these places: Depot, Yard.")
-        XCTAssertEqual(LocationCopy.title(try reference(#"{"rule":"outside","places":[{"label":"Depot"}]}"#)), "Share your location away from Depot")
+        let depot = try reference(#"{"rule":"outside","places":[{"label":"Depot"}]}"#)
+        XCTAssertEqual(LocationCopy.title(depot), "Share your location away from Depot")
+        XCTAssertNil(LocationCopy.requirement(depot))
+        let rejection = (try JSONSerialization.jsonObject(with: Data(contentsOf: Bundle.module.url(forResource: "reference-rejection", withExtension: "json", subdirectory: "Fixtures")!)) as! [String: Any])["message"] as! String
+        XCTAssertEqual(LocationCopy.rejection(rejection, reference: headOffice), "You do not seem to be at Head office yet. Move closer, then try again.")
+        XCTAssertEqual(LocationCopy.rejection(rejection, reference: depot), "You seem to be too close to Depot. Move away, then try again.")
+        XCTAssertEqual(LocationCopy.rejection(rejection, reference: nil), rejection)
+        let accuracy = (try JSONSerialization.jsonObject(with: Data(contentsOf: Bundle.module.url(forResource: "location-rejection", withExtension: "json", subdirectory: "Fixtures")!)) as! [String: Any])["message"] as! String
+        XCTAssertEqual(LocationCopy.rejection(accuracy, reference: headOffice), accuracy)
     }
 }

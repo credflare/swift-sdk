@@ -45,14 +45,22 @@ public enum LocationCopy {
     }
 
     public static func requirement(_ reference: PlaceReference?) -> String? {
-        guard let reference, let first = reference.placeLabels.first else { return nil }
+        guard let reference, reference.placeLabels.count > 1 else { return nil }
         let places = reference.placeLabels.joined(separator: ", ")
-        switch (reference.rule, reference.placeLabels.count) {
-        case (.within, 1): return CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNeedWithin, ["place": first])
-        case (.within, _): return CredflareCopy.text(reference.match == "all" ? CredflareSpec.CopyKey.locationPlaceNeedWithinAll : CredflareSpec.CopyKey.locationPlaceNeedWithinAny, ["places": places])
-        case (.outside, 1): return CredflareCopy.text(CredflareSpec.CopyKey.locationPlaceNeedOutside, ["place": first])
-        case (.outside, _): return CredflareCopy.text(reference.match == "all" ? CredflareSpec.CopyKey.locationPlaceNeedOutsideAll : CredflareSpec.CopyKey.locationPlaceNeedOutsideAny, ["places": places])
+        switch reference.rule {
+        case .within: return CredflareCopy.text(reference.match == "all" ? CredflareSpec.CopyKey.locationPlaceNeedWithinAll : CredflareSpec.CopyKey.locationPlaceNeedWithinAny, ["places": places])
+        case .outside: return CredflareCopy.text(reference.match == "all" ? CredflareSpec.CopyKey.locationPlaceNeedOutsideAll : CredflareSpec.CopyKey.locationPlaceNeedOutsideAny, ["places": places])
         }
+    }
+}
+
+public extension LocationCopy {
+    static let placeMismatchMessage = "Your location does not meet the place requirement for this verification."
+
+    static func rejection(_ message: String, reference: PlaceReference?) -> String {
+        guard let reference, !reference.placeLabels.isEmpty, message == placeMismatchMessage else { return message }
+        let key = reference.rule == .within ? CredflareSpec.CopyKey.locationPlaceNotMatchedWithin : CredflareSpec.CopyKey.locationPlaceNotMatchedOutside
+        return CredflareCopy.text(key, ["place": reference.placeLabels.joined(separator: ", ")])
     }
 }
 

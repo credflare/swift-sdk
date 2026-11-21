@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.0.0 (3f923c2940de). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.0.0 (1ee014f4a1df). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -59,7 +59,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.0.0"
-    public static let hash = "3f923c2940de"
+    public static let hash = "1ee014f4a1df"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -440,6 +440,9 @@ public enum CredflareSpec {
             "documents.method_both": "Photo and saved file",
             "documents.unavailable": "Not available in this app. Contact {verifier}.",
             "documents.selfie_next": "After your documents, you will take a selfie.",
+            "documents.location_next": "After your documents, you will share your location.",
+            "documents.selfie_location_next": "After your documents, you will take a selfie and share your location.",
+            "documents.location_selfie_next": "After your documents, you will share your location and take a selfie.",
             "documents.host_steps_next": "After your documents, the app will guide you through the remaining steps.",
             "capture.side_front": "Front",
             "capture.side_back": "Back",
@@ -621,6 +624,9 @@ public enum CredflareSpec {
         public static let documentsMethodBoth: String = "documents.method_both"
         public static let documentsUnavailable: String = "documents.unavailable"
         public static let documentsSelfieNext: String = "documents.selfie_next"
+        public static let documentsLocationNext: String = "documents.location_next"
+        public static let documentsSelfieLocationNext: String = "documents.selfie_location_next"
+        public static let documentsLocationSelfieNext: String = "documents.location_selfie_next"
         public static let documentsHostStepsNext: String = "documents.host_steps_next"
         public static let captureSideFront: String = "capture.side_front"
         public static let captureSideBack: String = "capture.side_back"

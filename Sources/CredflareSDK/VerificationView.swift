@@ -296,8 +296,7 @@ public struct CredflareVerificationView: View {
                     .buttonStyle(.plain).disabled(!requirement.isSupported)
             }
         }
-        if model.info?.profile?.requiresSelfie == true { ThemedText(t(Key.documentsSelfieNext), style: CredflareSpec.Tokens.typeSmall, tone: \.muted) }
-        if model.hostSteps { ThemedText(t(Key.documentsHostStepsNext), style: CredflareSpec.Tokens.typeSmall, tone: \.muted) }
+        if let key = model.info?.profile?.nextStepsCopyKey { ThemedText(t(key), style: CredflareSpec.Tokens.typeSmall, tone: \.muted) }
     }
 
     private func sectionLabel(_ requirement: DocumentRequirement) -> String {
@@ -519,7 +518,7 @@ extension VerificationModel {
         switch part {
         case "intro": return model
         case "documents", "capture", "review":
-            model.info = previewSession(documents: true, requirements: ["facial"], form: true)
+            model.info = previewSession(documents: true, requirements: ["facial", "location"], form: true)
             if part == "documents" { return model }
             model.open(model.documents[0])
             if screen == "capture" { return model }
@@ -555,7 +554,7 @@ extension VerificationModel {
             case "location_waiting": location.stage = .waiting(improving: true)
             case "location_found": location.stage = .found(fix)
             case "location_error": location.stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.locationLowAccuracy), retry: true)
-            case "location_rejected": location.stage = .failed("Your location does not meet the place requirement for this verification.", retry: true)
+            case "location_rejected": location.stage = .failed(LocationCopy.rejection(LocationCopy.placeMismatchMessage, reference: location.settings.reference), retry: true)
             default: break
             }
         case "receipt":

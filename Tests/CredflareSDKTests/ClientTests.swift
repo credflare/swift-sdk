@@ -235,4 +235,12 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["challenge"] as! String }, issued.gestures)
         XCTAssertEqual((metadata["liveness_results"] as! [[String: Any]]).map { $0["completed"] as! Bool }, [true, true, true])
     }
+    func testDocumentsListNamesOnlyTheStepsThatFollow() throws {
+        struct Payload: Decodable { let data: SessionInfo }
+        func profile(_ name: String) throws -> SessionInfo.Profile { try XCTUnwrap(JSONDecoder().decode(Payload.self, from: fixture(name)).data.profile) }
+        XCTAssertEqual(try profile("combined-session").nextStepsCopyKey, CredflareSpec.CopyKey.documentsSelfieNext)
+        XCTAssertEqual(try profile("session").nextStepsCopyKey, CredflareSpec.CopyKey.documentsHostStepsNext)
+        XCTAssertEqual(try profile("capture-session").stepsAfterDocuments, ["facial_verification", "location_verification"])
+        XCTAssertEqual(try profile("capture-session").nextStepsCopyKey, CredflareSpec.CopyKey.documentsSelfieLocationNext)
+    }
 }

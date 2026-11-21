@@ -163,3 +163,20 @@ enum ISO8601 {
         return formatter.date(from: value)
     }
 }
+
+extension SessionInfo.Profile {
+    public var stepsAfterDocuments: [String] { requirements.filter(\.isHandledInSDK).map(\.type) }
+
+    public var nextStepsCopyKey: String? {
+        var steps: [String] = []
+        for step in stepsAfterDocuments where !steps.contains(step) { steps.append(step) }
+        switch steps {
+        case ["facial_verification"]: return CredflareSpec.CopyKey.documentsSelfieNext
+        case ["location_verification"]: return CredflareSpec.CopyKey.documentsLocationNext
+        case ["facial_verification", "location_verification"]: return CredflareSpec.CopyKey.documentsSelfieLocationNext
+        case ["location_verification", "facial_verification"]: return CredflareSpec.CopyKey.documentsLocationSelfieNext
+        case []: return needsHostSteps ? CredflareSpec.CopyKey.documentsHostStepsNext : nil
+        default: return nil
+        }
+    }
+}

@@ -54,14 +54,6 @@ public actor VerificationSession {
     public func upload(_ data: Data, filename: String, source: CaptureSource, side: DocumentSide, documentTypeID: Int, key: UUID) async throws -> UploadedEvidence {
         try await multipart("/uploads/documents", data: data, filename: filename, fields: [("side", side.rawValue), ("capture_source", source.rawValue), ("document_type_id", String(documentTypeID))], key: key)
     }
-    public func uploadSelfie(_ data: Data, filename: String, key: UUID) async throws -> UploadedEvidence {
-        guard ["jpg", "jpeg", "png", "webp"].contains((filename as NSString).pathExtension.lowercased()) else { throw CredflareError.validation("Use a supported selfie image format.") }
-        return try await multipart("/uploads/biometrics", data: data, filename: filename, fields: [("side", DocumentSide.front.rawValue), ("capture_source", CaptureSource.camera.rawValue)], key: key)
-    }
-    public func submitSelfie(imageFileID: Int, key: UUID) async throws -> Int {
-        let body = try JSONSerialization.data(withJSONObject: ["type": "facial_verification", "image_file_id": imageFileID])
-        return try await call("POST", suffix: "/submit", body: body, contentType: "application/json", key: key, as: SubmissionReceipt.self).id
-    }
     public func createLivenessChallenge() async throws -> LivenessChallenge {
         try await call("POST", suffix: "/liveness-challenges", body: Data("{}".utf8), contentType: "application/json", as: LivenessChallenge.self)
     }

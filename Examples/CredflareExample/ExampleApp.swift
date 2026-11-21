@@ -11,12 +11,13 @@ struct DemoView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 24) {
             Text("Native iOS SDK demo").font(.title2.bold())
-            Text("Follow the steps requested by your verifier. Review your documents and selfie before sending.").foregroundStyle(.secondary)
+            Text("Follow the steps requested by your verifier. Review each item before you send it.").foregroundStyle(.secondary)
             Button("Start verification") { presenting = true }.buttonStyle(.borderedProminent).controlSize(.large)
             if let result { Text(result).foregroundStyle(.secondary) }
             Spacer()
             Text("Sandbox demo. Use sample documents.").font(.caption).foregroundStyle(.secondary)
         }.padding(24).multilineTextAlignment(.center)
+        .onAppear { if ProcessInfo.processInfo.arguments.contains("-present") { presenting = true } }
         .fullScreenCover(isPresented: $presenting) {
             CredflareVerificationView(sessionProvider: {
                 var request = URLRequest(url: URL(string: "http://localhost:3107/session")!)
@@ -33,7 +34,7 @@ struct DemoView: View {
                 switch value {
                 case .submitted: result = "Evidence received for review."
                 case .cancelled: result = "Verification closed."
-                case .hostActionRequired: result = "Return to your application for the remaining checks."
+                case .hostActionRequired: result = "Continue in your application for the remaining steps."
                 }
                 presenting = false
             })

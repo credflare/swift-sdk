@@ -100,11 +100,11 @@ public struct DocumentRequirement: Decodable, Identifiable {
     public var isSupported: Bool { ["upload", "snapshot_or_upload", "snapshot", "snapshot_and_upload"].contains(policy) }
     public var methodSummary: String {
         switch policy {
-        case "snapshot": return "Camera photos"
-        case "upload": return "Saved files"
-        case "snapshot_or_upload": return "Photo or file"
-        case "snapshot_and_upload": return "Photo and saved file"
-        default: return "Not available in this app"
+        case "snapshot": return CredflareCopy.text(CredflareSpec.CopyKey.documentsMethodCamera)
+        case "upload": return CredflareCopy.text(CredflareSpec.CopyKey.documentsMethodUpload)
+        case "snapshot_or_upload": return CredflareCopy.text(CredflareSpec.CopyKey.documentsMethodEither)
+        case "snapshot_and_upload": return CredflareCopy.text(CredflareSpec.CopyKey.documentsMethodBoth)
+        default: return CredflareCopy.text(CredflareSpec.CopyKey.documentsUnavailable, ["verifier": CredflareCopy.verifier(nil)])
         }
     }
     public func captureSteps() throws -> [CaptureStep] {

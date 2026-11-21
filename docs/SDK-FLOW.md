@@ -12,8 +12,8 @@
    2. Camera permission, then `POST /sdk/sessions/{session}/liveness-challenges`.
    3. Live front camera preview, mirrored on screen only. Frames are analysed every `sample_interval_ms` in the unmirrored portrait image.
    4. Position gate with the spec hints, then each gesture in the server's order with its prompt and per gesture timeout. Losing the face shows the face lost hint.
-   5. A JPEG frame is kept when each gesture completes. When the challenge records video, an H.264 mp4 of about 480p with no audio is written for at most `max_video_seconds`.
-   6. A selfie is taken from the next centred, neutral frame.
+   5. A JPEG frame is kept when each gesture completes. When the challenge records video, an H.264 mp4 scaled to 480 pixels on the short edge, with no audio, is written for at most `max_video_seconds`.
+   6. Once the next frame is centred and neutral, a full resolution photo is taken on the same camera session and scaled to at most 1600 pixels on the long edge. If the photo fails, that analysed frame is used instead.
    7. Uploads: one `gesture` frame per gesture, the `liveness_video`, then the `selfie`, each with the challenge ID, `capture_source=camera` and its own idempotency key. Then the facial submission.
    8. Timeout, expiry or a rejected submission shows the reason and a retry that requests a new challenge. A network failure while sending retries the same uploads with the same keys.
 5. **Location step** (when the profile has `location_verification`).

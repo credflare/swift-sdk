@@ -5,8 +5,10 @@ import SwiftUI
 
 enum CameraError: Error { case denied, unavailable, frontRequired }
 
-final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
+final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
     let session = AVCaptureSession()
+    private let photoOutput = AVCapturePhotoOutput()
+    private var photoContinuation: CheckedContinuation<Data?, Never>?
     private let cameraQueue = DispatchQueue(label: "net.credflare.sdk.camera")
     private let analysisQueue = DispatchQueue(label: "net.credflare.sdk.analysis")
     private var analysing = false
@@ -19,6 +21,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private var recordingLimit: Double = 0
     private var recording = false
     private var configured = false
+    private var device: AVCaptureDevice?
     var analysisInterval = Double(CredflareSpec.Liveness.sampleIntervalMs) / 1000
     var onFrame: ((CVPixelBuffer, Double) -> Void)?
 
@@ -37,7 +40,8 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         }
         session.beginConfiguration()
         defer { session.commitConfiguration() }
-        if session.canSetSessionPreset(.vga640x480) { session.sessionPreset = .vga640x480 }
+        if session.canSetSessionPreset(.hd1280x720) { session.sessionPreset = .hd1280x720 }
+        else if session.canSetSessionPreset(.vga640x480) { session.sessionPreset = .vga640x480 }
         let input = try AVCaptureDeviceInput(device: device)
         guard session.canAddInput(input) else { throw CameraError.unavailable }
         session.addInput(input)
@@ -47,21 +51,53 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         output.setSampleBufferDelegate(self, queue: cameraQueue)
         guard session.canAddOutput(output) else { throw CameraError.unavailable }
         session.addOutput(output)
-        if let connection = output.connection(with: .video) {
-            if #available(iOS 17.0, *) {
-                if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
-            } else if connection.isVideoOrientationSupported {
-                connection.videoOrientation = .portrait
-            }
-            if connection.isVideoMirroringSupported {
-                connection.automaticallyAdjustsVideoMirroring = false
-                connection.isVideoMirrored = false
-            }
+        if let connection = output.connection(with: .video) { Self.orient(connection) }
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+            self.device = device
+            if let connection = photoOutput.connection(with: .video) { Self.orient(connection) }
         }
         configured = true
     }
 
-    func start() { cameraQueue.async { [session] in if !session.isRunning { session.startRunning() } } }
+    private static func orient(_ connection: AVCaptureConnection) {
+        if #available(iOS 17.0, *) {
+            if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
+        } else if connection.isVideoOrientationSupported {
+            connection.videoOrientation = .portrait
+        }
+        if connection.isVideoMirroringSupported {
+            connection.automaticallyAdjustsVideoMirroring = false
+            connection.isVideoMirrored = false
+        }
+    }
+
+    func capturePhoto() async -> Data? {
+        guard configured, session.isRunning, photoContinuation == nil else { return nil }
+        let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+        settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
+        let raw: Data? = await withCheckedContinuation { continuation in
+            photoContinuation = continuation
+            photoOutput.capturePhoto(with: settings, delegate: self)
+        }
+        return raw.flatMap { LivenessCapture.resizedJPEG($0, maxPixel: LivenessCapture.selfieMaxPixel) }
+    }
+
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        let continuation = photoContinuation
+        photoContinuation = nil
+        continuation?.resume(returning: error == nil ? photo.fileDataRepresentation() : nil)
+    }
+
+    func start() {
+        cameraQueue.async { [weak self] in
+            guard let self, !self.session.isRunning else { return }
+            if let device = self.device, let largest = device.activeFormat.supportedMaxPhotoDimensions.max(by: { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }) {
+                self.photoOutput.maxPhotoDimensions = largest
+            }
+            self.session.startRunning()
+        }
+    }
 
     func stop() {
         cameraQueue.async { [weak self] in
@@ -117,10 +153,12 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private func append(_ sampleBuffer: CMSampleBuffer, buffer: CVPixelBuffer, time: CMTime, seconds: Double) {
         if writer == nil, let url = recordingURL {
             guard let next = try? AVAssetWriter(outputURL: url, fileType: .mp4) else { recording = false; return }
+            let (width, height) = LivenessCapture.videoSize(width: CVPixelBufferGetWidth(buffer), height: CVPixelBufferGetHeight(buffer))
             let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
                 AVVideoCodecKey: AVVideoCodecType.h264,
-                AVVideoWidthKey: CVPixelBufferGetWidth(buffer),
-                AVVideoHeightKey: CVPixelBufferGetHeight(buffer),
+                AVVideoWidthKey: width,
+                AVVideoHeightKey: height,
+                AVVideoScalingModeKey: AVVideoScalingModeResizeAspectFill,
                 AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 1_000_000],
             ])
             input.expectsMediaDataInRealTime = true

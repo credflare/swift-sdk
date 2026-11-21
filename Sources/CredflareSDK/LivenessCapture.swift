@@ -65,9 +65,32 @@ public final class LivenessCapture {
         return LivenessUpdate(sample: sample, phase: sequence.phase, event: event, selfieCaptured: false)
     }
 
+    public func replaceSelfie(_ data: Data) { if selfie != nil { selfie = data } }
+
     public func evidence(video: URL?) -> LivenessEvidence? {
         guard let selfie, gestureFrames.count == challenge.gestures.count else { return nil }
         return LivenessEvidence(challenge: challenge, provider: provider.name, gestureFrames: gestureFrames, selfie: selfie, video: video, results: sequence.results, faceDetection: sequence.faceDetection, capturedAt: clock())
+    }
+
+    public static let selfieMaxPixel = 1600
+
+    public static func videoSize(width: Int, height: Int) -> (Int, Int) {
+        let target = CredflareSpec.Liveness.videoMaxHeight
+        let short = min(width, height)
+        guard short > target else { return (width, height) }
+        let scale = Double(target) / Double(short)
+        func even(_ value: Int) -> Int { Int((Double(value) * scale / 2).rounded()) * 2 }
+        return (even(width), even(height))
+    }
+
+
+    public static func resizedJPEG(_ data: Data, maxPixel: Int) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxPixel, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary) else { return nil }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(output, "public.jpeg" as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.9] as CFDictionary)
+        return CGImageDestinationFinalize(destination) ? output as Data : nil
     }
 
     private static let context = CIContext(options: [.cacheIntermediates: false])

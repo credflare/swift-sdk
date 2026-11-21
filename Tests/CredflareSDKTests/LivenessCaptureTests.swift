@@ -127,4 +127,28 @@ final class LivenessCaptureTests: XCTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(mirrored.yaw), 20)
         XCTAssertNotNil(original.eyeOpen); XCTAssertNotNil(original.smile)
     }
+    func testSelfiePhotoIsCappedAndReplacesTheFrame() throws {
+        let context = CGContext(data: nil, width: 3024, height: 4032, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.setFillColor(CGColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 3024, height: 4032))
+        let original = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(original, "public.jpeg" as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, context.makeImage()!, nil); XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let resized = try XCTUnwrap(LivenessCapture.resizedJPEG(original as Data, maxPixel: LivenessCapture.selfieMaxPixel))
+        let image = CGImageSourceCreateImageAtIndex(CGImageSourceCreateWithData(resized as CFData, nil)!, 0, nil)!
+        XCTAssertEqual(max(image.width, image.height), 1600)
+        XCTAssertEqual(image.width, 1200)
+
+        let capture = try LivenessCapture(challenge: challenge, provider: FakeFaceSignalProvider(script: passingScript), clock: beforeExpiry)
+        capture.replaceSelfie(resized)
+        XCTAssertNil(capture.selfie)
+        _ = run(capture, frames: passingScript.count)
+        XCTAssertNotEqual(capture.selfie, resized)
+        capture.replaceSelfie(resized)
+        XCTAssertEqual(capture.evidence(video: nil)?.selfie, resized)
+    }
+
+    func testChallengeVideoIsScaledToAbout480p() {
+        XCTAssertTrue(LivenessCapture.videoSize(width: 720, height: 1280) == (480, 854))
+        XCTAssertTrue(LivenessCapture.videoSize(width: 480, height: 640) == (480, 640))
+    }
 }

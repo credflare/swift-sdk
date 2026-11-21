@@ -77,6 +77,7 @@ final class LivenessModel: ObservableObject {
     private func finish(_ capture: LivenessCapture) async {
         finishing = true
         camera?.onFrame = nil
+        if let photo = await camera?.capturePhoto() { capture.replaceSelfie(photo) }
         let video = capture.challenge.recordVideo ? await camera?.finishRecording() : nil
         recording = false
         camera?.stop()

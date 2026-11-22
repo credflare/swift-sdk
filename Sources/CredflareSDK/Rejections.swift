@@ -26,6 +26,7 @@ public struct Rejection: Equatable, Sendable {
     public let helpLink: URL?
     public let resendAvailableAt: Date?
     public var actionLabel: String { action.label }
+    public var leaveResult: VerificationResult? { action == .leave ? .hostActionRequired(code: code) : nil }
 
     public init(_ error: CredflareError, requester: String?, contact: HelpContact = HelpContact(), reference: PlaceReference? = nil) {
         let verifier = CredflareCopy.verifier(requester)

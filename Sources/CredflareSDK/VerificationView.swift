@@ -32,7 +32,7 @@ private final class VerificationModel: ObservableObject {
     private var submissionKey = UUID()
     let makeFaceProvider: () -> FaceSignalProvider
     let makeLocationSource: () -> LocationSource
-    var onLeave: () -> Void = {}
+    var onLeave: (VerificationResult) -> Void = { _ in }
 
     init(makeFaceProvider: @escaping () -> FaceSignalProvider, makeLocationSource: @escaping () -> LocationSource) {
         self.makeFaceProvider = makeFaceProvider; self.makeLocationSource = makeLocationSource
@@ -106,7 +106,7 @@ private final class VerificationModel: ObservableObject {
                 clearSteps()
                 contact = ContactCodeModel(client: client, channel: channel, verifier: verifier, onDone: { [weak self] in
                     Task { @MainActor in await self?.finished(receipt: channel == .email ? Key.receiptEmail : Key.receiptPhone) }
-                }, onLeave: { [weak self] in self?.onLeave() })
+                }, onLeave: { [weak self] result in self?.onLeave(result) })
             }
         case .documents, .receipt: clearSteps()
         }
@@ -254,7 +254,7 @@ public struct CredflareVerificationView: View {
         .tint(theme.primary)
         .background(theme.surface.ignoresSafeArea())
         .task {
-            model.onLeave = { onResult(.cancelled) }
+            model.onLeave = { result in onResult(result) }
             if autoStart && !autoStarted { autoStarted = true; await model.start(provider) }
         }
         .navigationBarBackButtonHidden(true)
@@ -439,7 +439,7 @@ public struct CredflareVerificationView: View {
         }
         if hostSteps {
             ThemedText(t(Key.receiptHostSteps), tone: \.muted)
-            PrimaryButton(t(Key.commonReturnToApp)) { onResult(.hostActionRequired) }
+            PrimaryButton(t(Key.commonReturnToApp)) { onResult(.hostActionRequired()) }
         } else {
             PrimaryButton(t(Key.receiptDone)) { onResult(.submitted) }
         }

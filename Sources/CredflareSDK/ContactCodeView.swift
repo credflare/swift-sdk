@@ -15,9 +15,9 @@ final class ContactCodeModel: ObservableObject {
     var help = HelpContact()
     private let client: VerificationSession
     private let onDone: () -> Void
-    private let onLeave: () -> Void
+    private let onLeave: (VerificationResult) -> Void
 
-    init(client: VerificationSession, channel: ContactChannel, verifier: String, onDone: @escaping () -> Void, onLeave: @escaping () -> Void) {
+    init(client: VerificationSession, channel: ContactChannel, verifier: String, onDone: @escaping () -> Void, onLeave: @escaping (VerificationResult) -> Void) {
         self.client = client; self.channel = channel; self.verifier = verifier; self.onDone = onDone; self.onLeave = onLeave
     }
 
@@ -62,13 +62,14 @@ final class ContactCodeModel: ObservableObject {
         }
     }
 
-    func perform(_ action: RejectionAction) async {
+    func perform(_ rejection: Rejection) async {
         problem = nil
-        switch action {
+        if let result = rejection.leaveResult { return onLeave(result) }
+        switch rejection.action {
         case .reenterCode: code = ""; stage = .code
         case .newCode: await send()
         case .wait, .retry, .restart: code = ""; stage = sent == nil ? .destination : .code
-        case .leave: onLeave()
+        case .leave: break
         }
     }
 
@@ -134,7 +135,7 @@ struct ContactCodeView: View {
             case .confirming:
                 LoadingBlock(label: model.text(CredflareSpec.CopyKey.contactCodeConfirming))
             case .rejected(let rejection):
-                RejectionPanel(rejection: rejection, fallbackTitle: model.text(model.titleKey)) { Task { await model.perform(rejection.action) } }
+                RejectionPanel(rejection: rejection, fallbackTitle: model.text(model.titleKey)) { Task { await model.perform(rejection) } }
             }
         }
         .onChange(of: model.stage) { stage in focused = stage == .code }

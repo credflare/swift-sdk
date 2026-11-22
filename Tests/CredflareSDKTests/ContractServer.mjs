@@ -11,7 +11,7 @@ function caseSession(token) {
  const step = progress[token] ?? 0;
  if (step === 0) return ['questionnaire-session',200];
  if (token === 'Bearer refresh-fail') return ['unauthorized',401];
- if (token === 'Bearer closes') return ['closed',409];
+ if (token === 'Bearer closes') return ['session-closed',409];
  if (step === 1) return ['requirement-added-session',200];
  return ['requirement-added-session',200,(json) => { json.data.profile.verification_requirements = []; return json; }];
 }

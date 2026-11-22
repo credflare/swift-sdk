@@ -85,6 +85,22 @@ extension ClientTests {
         }
     }
 
+    func testLeaveRejectionsEndTheFlowForTheHostWithTheirCode() async throws {
+        for name in ["email.not_configured", "email.send_limit", "phone.not_configured", "phone.send_limit"] {
+            let channel = ContactChannel(rawValue: String(name.split(separator: ".")[0]))!
+            do { _ = try await VerificationSession(try descriptor("reject:\(name)")).requestCode(channel, to: channel == .email ? "jane@example.test" : "+237650000001"); XCTFail("\(name) was not rejected") }
+            catch let error as CredflareError {
+                let screen = Rejection(error, requester: nil)
+                XCTAssertEqual(screen.action, .leave, name)
+                XCTAssertEqual(screen.leaveResult, .hostActionRequired(code: RejectionCode(rawValue: name)), name)
+            }
+        }
+        for name in ["phone.code_invalid", "phone.resend_too_soon", "email.code_expired"] {
+            XCTAssertNil(Rejection(.api(422, "", code: RejectionCode(rawValue: name)), requester: nil).leaveResult, name)
+        }
+        XCTAssertNil(Rejection(.api(422, "Server said no.", code: nil), requester: nil).leaveResult)
+    }
+
     func testResendRejectionCarriesItsOwnResendTime() async throws {
         for channel in ContactChannel.allCases {
             let raw = try JSONSerialization.jsonObject(with: fixture("rejections/\(channel.rawValue).resend_too_soon")) as! [String: Any]

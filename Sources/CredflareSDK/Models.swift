@@ -179,4 +179,4 @@ public enum CredflareError: LocalizedError {
         switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _, _, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
     }
 }
-public enum VerificationResult { case submitted, cancelled, hostActionRequired }
+public enum VerificationResult: Equatable { case submitted, cancelled, hostActionRequired(code: RejectionCode? = nil) }

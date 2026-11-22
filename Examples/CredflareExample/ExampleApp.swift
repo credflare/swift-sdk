@@ -18,6 +18,11 @@ struct CredflareExampleApp: App {
     }
 }
 struct DemoView: View {
+    private var sessionURL: URL {
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-session-url"), index + 1 < arguments.count, let url = URL(string: arguments[index + 1]) { return url }
+        return URL(string: "http://localhost:3107/session")!
+    }
     @State private var presenting = false
     @State private var result: String?
     var body: some View {
@@ -32,7 +37,7 @@ struct DemoView: View {
         .onAppear { if ProcessInfo.processInfo.arguments.contains("-present") { presenting = true } }
         .fullScreenCover(isPresented: $presenting) {
             CredflareVerificationView(sessionProvider: {
-                var request = URLRequest(url: URL(string: "http://localhost:3107/session")!)
+                var request = URLRequest(url: sessionURL)
                 request.httpMethod = "POST"; request.timeoutInterval = 30
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.httpBody = try JSONSerialization.data(withJSONObject: ["email": "native-demo@example.test"])

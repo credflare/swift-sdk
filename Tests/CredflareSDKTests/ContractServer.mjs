@@ -4,10 +4,26 @@ import {join} from 'node:path';
 const fixtures = process.argv[2];
 let redirectHits = 0, uploadSource = '', requestKey = '', droppedSubmit = false;
 const requests = [];
+const progress = {};
 const trap = createServer((req,res) => { redirectHits++; res.end('{}'); }).listen(0,'127.0.0.1');
 const sessions = {'Bearer selfie':'facial-session','Bearer capture':'capture-session','Bearer combined':'combined-session'};
+function caseSession(token) {
+ const step = progress[token] ?? 0;
+ if (step === 0) return ['questionnaire-session',200];
+ if (token === 'Bearer refresh-fail') return ['unauthorized',401];
+ if (token === 'Bearer closes') return ['closed',409];
+ if (step === 1) return ['requirement-added-session',200];
+ return ['requirement-added-session',200,(json) => { json.data.profile.verification_requirements = []; return json; }];
+}
 function route(req, token, body) {
  if (token === 'Bearer unauthorized') return ['unauthorized',401];
+ if (req.url.endsWith('-codes')) return [req.url.endsWith('/phone-codes') ? 'phone-code-request' : 'email-code-request',202];
+ if (req.url.endsWith('-codes/confirm')) { if (progress[token]) progress[token] = 2; return ['email-code-confirm',201]; }
+ if (['Bearer questionnaire','Bearer refresh-fail','Bearer closes'].includes(token)) {
+  if (req.method === 'GET') return caseSession(token);
+  if (req.url.endsWith('/submit')) { progress[token] = 1; return ['questionnaire-submission',201]; }
+ }
+ if (token === 'Bearer hidden-answer' && req.url.endsWith('/submit')) return ['questionnaire-hidden-answer',422];
  if (req.method === 'DELETE') return ['cancelled',200];
  if (req.url.endsWith('/liveness-challenges')) return ['liveness-challenge',201];
  if (req.url.endsWith('/uploads/documents')) return ['upload',201];
@@ -44,9 +60,10 @@ const server = createServer(async (req,res) => {
  requests.push({method:req.method,path:req.url,key:req.headers['x-idempotency-key'] ?? null,contentType:req.headers['content-type'] ?? null,body:body.length > 4096 ? body.slice(0,4096) : body});
  if (token === 'Bearer drop-submit' && req.url.endsWith('/submit') && !droppedSubmit) {droppedSubmit = true;return req.socket.destroy();}
  const rejection = /^Bearer reject:([a-z_.]+)$/.exec(token ?? '');
- if (rejection && req.url.endsWith('/submit')) {res.writeHead(422,{'Content-Type':'application/json'});return res.end(await readFile(join(fixtures,'rejections',rejection[1]+'.json')));}
- const [fixture,status] = route(req, token, body);
+ if (rejection && req.method === 'POST') {res.writeHead(422,{'Content-Type':'application/json'});return res.end(await readFile(join(fixtures,'rejections',rejection[1]+'.json')));}
+ const [fixture,status,change] = route(req, token, body);
  res.writeHead(status,{'Content-Type':'application/json'});
- res.end(await readFile(join(fixtures,fixture+'.json')));
+ const raw = await readFile(join(fixtures,fixture+'.json'));
+ res.end(change ? JSON.stringify(change(JSON.parse(raw))) : raw);
 });
 server.listen(0,'127.0.0.1',()=>console.log(server.address().port));

@@ -54,23 +54,6 @@ public enum LocationCopy {
     }
 }
 
-public extension LocationCopy {
-    static func rejection(_ error: CredflareError, reference: PlaceReference?) -> String {
-        let fallback = error.localizedDescription
-        switch error.code {
-        case .locationReferenceNotMatched?:
-            guard let reference, !reference.placeLabels.isEmpty else { return fallback }
-            let key = reference.rule == .within ? CredflareSpec.CopyKey.locationPlaceNotMatchedWithin : CredflareSpec.CopyKey.locationPlaceNotMatchedOutside
-            return CredflareCopy.text(key, ["place": reference.placeLabels.joined(separator: ", ")])
-        case .locationMock?: return CredflareCopy.text(CredflareSpec.CopyKey.locationMockDetected)
-        case .locationAccuracy?: return CredflareCopy.text(reference == nil ? CredflareSpec.CopyKey.locationLowAccuracy : CredflareSpec.CopyKey.locationPlaceNotPrecise)
-        case .locationStale?: return CredflareCopy.text(CredflareSpec.CopyKey.locationStale)
-        case .locationIpCountry?: return CredflareCopy.text(CredflareSpec.CopyKey.locationIpCountryMismatch)
-        default: return fallback
-        }
-    }
-}
-
 public enum LocationAuthorization: Sendable { case granted, denied, unavailable }
 
 public protocol LocationSource: AnyObject {

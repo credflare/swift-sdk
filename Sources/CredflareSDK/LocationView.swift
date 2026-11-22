@@ -3,10 +3,11 @@ import SwiftUI
 
 @MainActor
 final class LocationModel: ObservableObject {
-    enum Stage: Equatable { case consent, waiting(improving: Bool), found(LocationFix), sending, failed(String, retry: Bool) }
+    enum Stage: Equatable { case consent, waiting(improving: Bool), found(LocationFix), sending, failed(String, retry: Bool), rejected(Rejection) }
     @Published var stage: Stage = .consent
     let settings: LocationSettings
     let verifier: String
+    var help = HelpContact()
     private let client: VerificationSession
     private let makeSource: () -> LocationSource
     private let onDone: () -> Void
@@ -44,7 +45,7 @@ final class LocationModel: ObservableObject {
             _ = try await client.submitLocation(fix.submission(), key: submitKey)
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, _, _) = error { stage = .failed(LocationCopy.rejection(error, reference: settings.reference), retry: true) }
+            if case .api(422, _, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help, reference: settings.reference)) }
             else { stage = .failed(text(CredflareSpec.CopyKey.errorsSendLocationFailed), retry: true) }
         } catch {
             stage = .failed(text(CredflareSpec.CopyKey.errorsSendLocationFailed), retry: true)
@@ -88,6 +89,8 @@ struct LocationView: View {
                 SecondaryButton(CredflareCopy.text(CredflareSpec.CopyKey.locationRetry)) { Task { await model.locate() } }
             case .sending:
                 LoadingBlock(label: CredflareCopy.text(CredflareSpec.CopyKey.sendingSending))
+            case .rejected(let rejection):
+                RejectionPanel(rejection: rejection, fallbackTitle: LocationCopy.title(model.settings.reference)) { Task { await model.locate() } }
             case .failed(let message, let retry):
                 TitleText(LocationCopy.title(model.settings.reference))
                 ErrorBox(message: message)

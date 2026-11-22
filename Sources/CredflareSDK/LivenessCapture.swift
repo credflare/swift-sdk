@@ -120,18 +120,8 @@ public enum LivenessSubmitter {
 }
 
 public enum LivenessRejection {
-    public static let restartCodes: Set<RejectionCode> = [.livenessChallengeExpired, .livenessChallengeInvalid, .livenessChallengeUsed, .livenessFrameOutOfWindow]
-
-    public static func message(for error: CredflareError) -> String {
-        switch error.code {
-        case let code? where restartCodes.contains(code): return CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired)
-        default: return error.localizedDescription
-        }
-    }
-
     public static func needsNewChallenge(_ error: CredflareError) -> Bool {
-        if let code = error.code, restartCodes.contains(code) { return true }
-        if case .api(422, _, _) = error { return true }
+        if case .api(422, _, _, _) = error { return true }
         return false
     }
 }

@@ -54,15 +54,20 @@ public enum JSONValue: Codable, Sendable {
 
 public struct SessionInfo: Decodable {
     public let sessionID: UUID
+    public let status: String?
     public let environment: String
     public let requester: Requester?
     public let customMessage: String?
     public let uploadLimits: UploadLimits
     public let profile: Profile?
     enum CodingKeys: String, CodingKey {
-        case sessionID = "session_id", environment, requester, customMessage = "custom_message", uploadLimits = "upload_limits", profile
+        case sessionID = "session_id", status, environment, requester, customMessage = "custom_message", uploadLimits = "upload_limits", profile
     }
-    public struct Requester: Decodable { public let name: String; public let logoURL: URL?; enum CodingKeys: String, CodingKey { case name, logoURL = "logo_url" } }
+    public struct Requester: Decodable {
+        public let name: String; public let logoURL: URL?; public let helpEmail: String?; public let helpURL: String?
+        enum CodingKeys: String, CodingKey { case name, logoURL = "logo_url", helpEmail = "help_email", helpURL = "help_url" }
+        public var help: HelpContact { HelpContact(email: helpEmail, url: helpURL) }
+    }
     public struct UploadLimits: Decodable {
         public let maxFileSizeBytes: Int; public let allowedFileTypes: [String]
         enum CodingKeys: String, CodingKey { case maxFileSizeBytes = "max_file_size_bytes", allowedFileTypes = "allowed_file_types" }
@@ -75,7 +80,8 @@ public struct SessionInfo: Decodable {
         public var requirements: [VerificationRequirement] { verificationRequirements.map(VerificationRequirement.init) }
         public var requiresSelfie: Bool { requirements.contains { $0.facial != nil } }
         public var requiresLocation: Bool { requirements.contains { $0.location != nil } }
-        public var needsHostSteps: Bool { !(formSchema?.isEmpty ?? true) || requirements.contains { !$0.isHandledInSDK } }
+        public var questionnaire: Questionnaire? { Questionnaire(formSchema) }
+        public var needsHostSteps: Bool { !(questionnaire?.isSupported ?? true) || requirements.contains { !$0.isHandledInSDK } }
     }
 }
 
@@ -146,16 +152,31 @@ public struct RejectionCode: RawRepresentable, Hashable, Sendable, CustomStringC
     public static let livenessVideoMissing = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessVideoMissing)
     public static let livenessVideoTooLong = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessVideoTooLong)
     public static let livenessVideoUnreadable = RejectionCode(rawValue: CredflareSpec.ErrorCode.livenessVideoUnreadable)
+    public static let emailNotConfigured = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailNotConfigured)
+    public static let emailResendTooSoon = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailResendTooSoon)
+    public static let emailSendLimit = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailSendLimit)
+    public static let emailCodeMissing = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailCodeMissing)
+    public static let emailCodeExpired = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailCodeExpired)
+    public static let emailCodeInvalid = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailCodeInvalid)
+    public static let emailTooManyAttempts = RejectionCode(rawValue: CredflareSpec.ErrorCode.emailTooManyAttempts)
+    public static let phoneNotConfigured = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneNotConfigured)
+    public static let phoneResendTooSoon = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneResendTooSoon)
+    public static let phoneSendLimit = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneSendLimit)
+    public static let phoneCodeMissing = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneCodeMissing)
+    public static let phoneCodeExpired = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneCodeExpired)
+    public static let phoneCodeInvalid = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneCodeInvalid)
+    public static let phoneTooManyAttempts = RejectionCode(rawValue: CredflareSpec.ErrorCode.phoneTooManyAttempts)
 }
 
 public enum CredflareError: LocalizedError {
-    case validation(String), network(String), api(Int, String, code: RejectionCode?), invalidResponse
+    case validation(String), network(String), api(Int, String, code: RejectionCode?, resendAvailableAt: String? = nil), invalidResponse
     public var errorDescription: String? {
-        switch self { case .validation(let v), .network(let v), .api(_, let v, _): return v; case .invalidResponse: return "Credflare returned an invalid response." }
+        switch self { case .validation(let v), .network(let v), .api(_, let v, _, _): return v; case .invalidResponse: return "Credflare returned an invalid response." }
     }
-    public var code: RejectionCode? { if case .api(_, _, let code) = self { return code }; return nil }
+    public var code: RejectionCode? { if case .api(_, _, let code, _) = self { return code }; return nil }
+    public var resendAvailableAt: Date? { if case .api(_, _, _, let value?) = self { return ISO8601.parse(value) }; return nil }
     public var type: String {
-        switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
+        switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _, _, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
     }
 }
 public enum VerificationResult { case submitted, cancelled, hostActionRequired }

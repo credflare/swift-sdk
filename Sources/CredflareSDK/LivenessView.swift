@@ -4,7 +4,7 @@ import AVFoundation
 
 @MainActor
 final class LivenessModel: ObservableObject {
-    enum Stage: Equatable { case intro, preparing, running, sending, failed(String) }
+    enum Stage: Equatable { case intro, preparing, running, sending, failed(String), rejected(Rejection) }
     @Published var stage: Stage = .intro
     @Published var hint = CredflareCopy.text(CredflareSpec.CopyKey.livenessPositionNoFace)
     @Published var current = 0
@@ -12,6 +12,7 @@ final class LivenessModel: ObservableObject {
     @Published var recording = false
     let settings: FacialSettings
     let verifier: String
+    var help = HelpContact()
     private let client: VerificationSession
     private let makeProvider: () -> FaceSignalProvider
     private let onDone: () -> Void
@@ -98,7 +99,7 @@ final class LivenessModel: ObservableObject {
             if LivenessRejection.needsNewChallenge(error) {
                 pending = nil
                 if let video = evidence.video { try? FileManager.default.removeItem(at: video) }
-                stage = .failed(LivenessRejection.message(for: error))
+                stage = .rejected(Rejection(error, requester: verifier, contact: help))
             }
             else { pending = evidence; stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.errorsSendSelfieFailed)) }
         } catch {
@@ -163,6 +164,8 @@ struct LivenessView: View {
                 Text(model.hint).specText(CredflareSpec.Tokens.typeSubtitle).foregroundStyle(theme.ink).accessibilityAddTraits(.updatesFrequently)
             case .sending:
                 LoadingBlock(label: CredflareCopy.text(CredflareSpec.CopyKey.livenessSending))
+            case .rejected(let rejection):
+                RejectionPanel(rejection: rejection, fallbackTitle: CredflareCopy.text(CredflareSpec.CopyKey.livenessTitle)) { Task { await model.start() } }
             case .failed(let message):
                 SpecIconView(CredflareSpec.Icons.selfie, color: theme.primary, size: CGFloat(CredflareSpec.Tokens.sizeIllustration))
                 TitleText(CredflareCopy.text(CredflareSpec.CopyKey.livenessTitle))

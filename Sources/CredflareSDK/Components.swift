@@ -75,3 +75,29 @@ struct LoadingBlock: View {
         }.frame(maxWidth: .infinity).padding(.vertical, 64)
     }
 }
+
+struct RejectionPanel: View {
+    @Environment(\.colorScheme) private var scheme
+    let rejection: Rejection
+    let fallbackTitle: String
+    var actionEnabled = true
+    let onAction: () -> Void
+    var body: some View {
+        let theme = CredflareTheme(scheme)
+        VStack(spacing: CredflareTheme.gap) {
+            SpecIconView(CredflareSpec.Icons.error, color: theme.error, size: CGFloat(CredflareSpec.Tokens.sizeIllustration))
+            TitleText(rejection.title ?? fallbackTitle)
+            ThemedText(rejection.message)
+            VStack(spacing: CGFloat(CredflareSpec.Tokens.spacingXs)) {
+                ThemedText(rejection.requestedBy, style: CredflareSpec.Tokens.typeSmall, tone: \.muted)
+                if let link = rejection.helpLink {
+                    Link(destination: link) { Text(rejection.help).specText(CredflareSpec.Tokens.typeSmall).foregroundStyle(theme.primary).underline() }
+                } else {
+                    ThemedText(rejection.help, style: CredflareSpec.Tokens.typeSmall, tone: \.muted)
+                }
+            }
+            PrimaryButton(rejection.actionLabel, action: onAction).disabled(!actionEnabled)
+        }
+        .accessibilityElement(children: .contain)
+    }
+}

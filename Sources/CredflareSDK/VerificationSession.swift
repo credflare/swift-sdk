@@ -43,7 +43,7 @@ public actor VerificationSession {
         guard let http = response as? HTTPURLResponse else { throw CredflareError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            throw CredflareError.api(http.statusCode, json?["message"] as? String ?? "Request failed.", code: (json?["code"] as? String).map(RejectionCode.init(rawValue:)))
+            throw CredflareError.api(http.statusCode, json?["message"] as? String ?? "Request failed.", code: (json?["code"] as? String).map(RejectionCode.init(rawValue:)), resendAvailableAt: json?["resend_available_at"] as? String)
         }
         guard let envelope = try? JSONDecoder().decode(Envelope<T>.self, from: data) else { throw CredflareError.invalidResponse }
         guard envelope.success else { throw CredflareError.api(http.statusCode, envelope.message ?? "Request failed.", code: nil) }
@@ -85,6 +85,18 @@ public actor VerificationSession {
     }
     public func submitLocation(_ submission: LocationSubmission, key: UUID) async throws -> Int {
         try await call("POST", suffix: "/submit", body: try JSONEncoder().encode(submission), contentType: "application/json", key: key, as: SubmissionReceipt.self).id
+    }
+    public func requestCode(_ channel: ContactChannel, to destination: String) async throws -> ContactCodeSent {
+        let body = try JSONEncoder().encode([channel.rawValue: channel.normalized(destination)])
+        return try await call("POST", suffix: "/\(channel.rawValue)-codes", body: body, contentType: "application/json", as: ContactCodeSent.self)
+    }
+    public func confirmCode(_ channel: ContactChannel, code: String) async throws -> Int {
+        let body = try JSONEncoder().encode(["code": code])
+        return try await call("POST", suffix: "/\(channel.rawValue)-codes/confirm", body: body, contentType: "application/json", as: SubmissionReceipt.self).id
+    }
+    public func submitAnswers(_ fields: [String: JSONValue], key: UUID) async throws -> Int {
+        let body = try JSONEncoder().encode(["type": JSONValue.string("form_submission"), "fields": .object(fields)])
+        return try await call("POST", suffix: "/submit", body: body, contentType: "application/json", key: key, as: SubmissionReceipt.self).id
     }
     public func submit(documentTypeID: Int, evidence: [Evidence], key: UUID) async throws -> Int {
         struct Payload: Encodable {

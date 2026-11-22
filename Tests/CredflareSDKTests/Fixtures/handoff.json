@@ -1,0 +1,8 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "handoff_url": "http://localhost:3020/verify/handoff#token=27b9474377e99bd480333940ce24d35f461f7baf1c703f4671ad2f67dff6eebe",
+        "expires_at": "2026-11-22T01:07:23.000000Z"
+    }
+}

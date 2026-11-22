@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "This code has expired. Ask for a new one.",
+    "errors": [],
+    "code": "phone.code_expired"
+}

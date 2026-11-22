@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "This code is not correct.",
+    "errors": [],
+    "code": "email.code_invalid"
+}

@@ -1,0 +1,11 @@
+{
+    "success": true,
+    "message": "Code sent",
+    "data": {
+        "channel": "email",
+        "destination": "J*******@example.test",
+        "expires_at": "2026-11-22T00:08:07.000000Z",
+        "resend_available_at": "2026-11-21T23:59:07.000000Z",
+        "sends_remaining": 4
+    }
+}

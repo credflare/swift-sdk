@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Too many codes were sent. Try again tomorrow.",
+    "errors": [],
+    "code": "email.send_limit"
+}

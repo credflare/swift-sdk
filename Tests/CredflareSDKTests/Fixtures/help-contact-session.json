@@ -1,0 +1,51 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "session_id": "01a200c1-fc81-70ee-b75d-3cd265b68eb4",
+        "expires_at": "2026-11-22T01:27:22.000000Z",
+        "status": "pending",
+        "environment": "sandbox",
+        "custom_message": null,
+        "requester": {
+            "name": "Ada's Workspace",
+            "logo_url": null,
+            "help_email": "help@northwind.example",
+            "help_url": "https://northwind.example/support"
+        },
+        "brand": {
+            "logo_url": null,
+            "colors": []
+        },
+        "upload_limits": {
+            "max_file_size_bytes": 10485760,
+            "allowed_file_types": [
+                "jpg",
+                "png",
+                "webp",
+                "pdf"
+            ],
+            "max_uploads_per_requirement": 5
+        },
+        "profile": {
+            "name": "Contact and phone handoff",
+            "form_schema": null,
+            "verification_requirements": [
+                {
+                    "verification_type": "email_verification",
+                    "settings": null
+                },
+                {
+                    "verification_type": "phone_verification",
+                    "settings": null
+                }
+            ],
+            "document_requirements": []
+        },
+        "capabilities": {
+            "trusted_camera": false,
+            "liveness": "challenge",
+            "deepfake_detection": false
+        }
+    }
+}

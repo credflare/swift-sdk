@@ -1,0 +1,149 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "session_id": "01a2008b-bc4d-7111-b10f-d2e439853704",
+        "expires_at": "2026-11-22T00:28:07.000000Z",
+        "status": "pending",
+        "environment": "sandbox",
+        "custom_message": null,
+        "requester": {
+            "name": "Michaela Reynolds's Workspace",
+            "logo_url": null
+        },
+        "brand": null,
+        "upload_limits": {
+            "max_file_size_bytes": 10485760,
+            "allowed_file_types": [
+                "jpg",
+                "png",
+                "webp",
+                "pdf"
+            ],
+            "max_uploads_per_requirement": 5
+        },
+        "profile": {
+            "name": "Questionnaire example",
+            "form_schema": [
+                {
+                    "key": "country",
+                    "label": "Country of residence",
+                    "type": "country",
+                    "required": true
+                },
+                {
+                    "key": "employment",
+                    "label": "Employment",
+                    "type": "single_select",
+                    "required": true,
+                    "options": [
+                        "Employed",
+                        "Self employed",
+                        "Student",
+                        "Retired"
+                    ]
+                },
+                {
+                    "key": "employer",
+                    "label": "Employer name",
+                    "type": "text",
+                    "required": true,
+                    "show_if": {
+                        "match": "all",
+                        "conditions": [
+                            {
+                                "path": "form.employment",
+                                "op": "equals",
+                                "value": "Employed"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "income",
+                    "label": "Yearly income",
+                    "type": "number",
+                    "required": false,
+                    "min": 0,
+                    "max": 10000000,
+                    "show_if": {
+                        "match": "any",
+                        "conditions": [
+                            {
+                                "path": "form.employment",
+                                "op": "in",
+                                "value": [
+                                    "Employed",
+                                    "Self employed"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "birth_date",
+                    "label": "Date of birth",
+                    "type": "date",
+                    "required": true
+                },
+                {
+                    "key": "contact_email",
+                    "label": "Email address",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "contact_phone",
+                    "label": "Phone number",
+                    "type": "phone",
+                    "required": false
+                },
+                {
+                    "key": "sources",
+                    "label": "Sources of funds",
+                    "type": "multi_select",
+                    "required": false,
+                    "options": [
+                        "Salary",
+                        "Savings",
+                        "Investments",
+                        "Other"
+                    ]
+                },
+                {
+                    "key": "sources_other",
+                    "label": "Other source of funds",
+                    "type": "text",
+                    "required": true,
+                    "show_if": {
+                        "conditions": [
+                            {
+                                "path": "form.sources",
+                                "op": "contains",
+                                "value": "Other"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "terms",
+                    "label": "I agree to share these details for this verification",
+                    "type": "consent",
+                    "required": true
+                }
+            ],
+            "verification_requirements": [
+                {
+                    "verification_type": "email_verification",
+                    "settings": null
+                }
+            ],
+            "document_requirements": []
+        },
+        "capabilities": {
+            "trusted_camera": false,
+            "liveness": "challenge",
+            "deepfake_detection": false
+        }
+    }
+}

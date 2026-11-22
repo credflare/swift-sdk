@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Confirming a phone number is not available for this verification yet.",
+    "errors": [],
+    "code": "phone.not_configured"
+}

@@ -166,7 +166,8 @@ final class LivenessCaptureTests: XCTestCase {
         XCTAssertTrue(LivenessCapture.videoSize(width: 480, height: 640) == (480, 640))
     }
     func testRejectionCodesCoverTheSpecAndKeepUnknownValues() {
-        XCTAssertEqual(Set(CredflareSpec.ErrorCode.meanings.keys).count, 14)
+        XCTAssertEqual(Set(CredflareSpec.ErrorCode.meanings.keys).count, 28)
+        XCTAssertTrue(RejectionCode.phoneCodeInvalid.isKnown)
         XCTAssertTrue(RejectionCode.locationMock.isKnown)
         let unknown = RejectionCode(rawValue: "liveness.new_rule")
         XCTAssertFalse(unknown.isKnown)

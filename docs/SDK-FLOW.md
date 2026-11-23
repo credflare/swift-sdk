@@ -31,7 +31,7 @@ Documents come first, then questions, then checks in profile order. After every 
 
 ## Rejections
 
-Every `422` with a known `code` shows the title, message and action from the spec rejection map, with `{verifier}` filled from `requester.name` or the fallback, plus the requested by and help lines. Actions: Try again stays on the step, Start again requests a new challenge, Enter the code again clears the code, Send a new code requests one for the same destination, the wait action returns to the code screen with its countdown, and Close ends the flow with `hostActionRequired(code:)` carrying the rejection code. A `422` without a code or with an unknown code shows the server message with Try again.
+Every `422` with a known `code` shows the title, message and action from the spec rejection map, with `{verifier}` filled from `requester.name` or the fallback, plus the requested by and help lines. Actions: Try again stays on the step, Start again requests a new challenge, Enter the code again clears the code, Send a new code requests one for the same destination, the wait action returns to the code screen with its countdown, and Close ends the flow with `hostActionRequired(code:)` carrying the rejection code. Leaving such a screen through the header Close ends the same way. A `422` without a code or with an unknown code shows the server message with Try again.
 
 ## Face signals
 

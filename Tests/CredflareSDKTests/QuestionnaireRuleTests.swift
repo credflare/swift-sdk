@@ -71,6 +71,19 @@ final class QuestionnaireRuleTests: XCTestCase {
         XCTAssertTrue(questionnaire.isSupported)
         XCTAssertFalse(Questionnaire(questions: [Question(try question("country", as: "signature"))]).isSupported)
     }
+
+    func testASessionWithoutAProfileGoesToTheReceipt() throws {
+        let raw = try Data(contentsOf: Bundle.module.url(forResource: "session", withExtension: "json", subdirectory: "Fixtures")!)
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: raw) as? [String: Any])
+        var data = try XCTUnwrap(payload["data"] as? [String: Any])
+        data["profile"] = NSNull()
+        payload["data"] = data
+        struct Payload: Decodable { let data: SessionInfo }
+        let info = try JSONDecoder().decode(Payload.self, from: JSONSerialization.data(withJSONObject: payload)).data
+        XCTAssertNil(info.profile)
+        guard case .receipt(let hostSteps) = info.nextStep else { return XCTFail("Expected the receipt") }
+        XCTAssertFalse(hostSteps)
+    }
 }
 
 extension Question {

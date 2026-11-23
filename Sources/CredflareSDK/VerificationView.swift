@@ -45,7 +45,7 @@ private final class VerificationModel: ObservableObject {
     var step: CaptureStep? { index < steps.count ? steps[index] : nil }
     var documents: [DocumentRequirement] { info?.profile?.documentRequirements ?? [] }
     var screen: Screen {
-        guard let info, info.profile != nil else { return .intro }
+        guard let info else { return .intro }
         if document != nil { return .capture }
         if closed { return .receipt(hostSteps: false) }
         switch info.nextStep {
@@ -54,6 +54,14 @@ private final class VerificationModel: ObservableObject {
         case .check(let next): return next.facial != nil ? .liveness : next.location != nil ? .location : .contact
         case .receipt(let hostSteps): return .receipt(hostSteps: hostSteps)
         }
+    }
+    var leaveResult: VerificationResult? {
+        var rejections: [Rejection] = []
+        if case .rejected(let rejection)? = contact?.stage { rejections.append(rejection) }
+        if case .rejected(let rejection)? = questions?.stage { rejections.append(rejection) }
+        if case .rejected(let rejection)? = liveness?.stage { rejections.append(rejection) }
+        if case .rejected(let rejection)? = location?.stage { rejections.append(rejection) }
+        return rejections.lazy.compactMap(\.leaveResult).first
     }
     var complete: Bool { if case .receipt(false) = screen { return !pendingRefresh }; return false }
 
@@ -260,7 +268,7 @@ public struct CredflareVerificationView: View {
         .navigationBarBackButtonHidden(true)
         .interactiveDismissDisabled()
         .confirmationDialog(t(Key.exitTitle), isPresented: $confirmClose, titleVisibility: .visible) {
-            Button(t(Key.exitLeave), role: .destructive) { onResult(.cancelled) }
+            Button(t(Key.exitLeave), role: .destructive) { onResult(model.leaveResult ?? .cancelled) }
             Button(t(Key.exitStay), role: .cancel) {}
         } message: { Text(t(Key.exitBody)) }
         .confirmationDialog(t(Key.exitDiscardTitle), isPresented: $confirmDiscard, titleVisibility: .visible) {

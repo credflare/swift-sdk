@@ -74,6 +74,16 @@ public enum LocationOutcome: Equatable, Sendable {
     case denied, unavailable, timeout, lowAccuracy, mock
 }
 
+private final class RejectedFixes: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcome: LocationOutcome?
+    var worst: LocationOutcome? { lock.lock(); defer { lock.unlock() }; return outcome }
+    func note(_ next: LocationOutcome) {
+        lock.lock(); defer { lock.unlock() }
+        if outcome != .mock { outcome = next }
+    }
+}
+
 public enum LocationCollector {
     public static func collect(from source: LocationSource, settings: LocationSettings, timeout: TimeInterval = TimeInterval(CredflareSpec.Location.fixTimeoutS), now: @escaping @Sendable () -> Date = Date.init, onFix: (@Sendable (LocationFix) -> Void)? = nil) async -> LocationOutcome {
         switch await source.authorize() {
@@ -83,18 +93,18 @@ public enum LocationCollector {
         }
         let stream = source.fixes()
         defer { source.stop() }
+        let rejected = RejectedFixes()
         return await withTaskGroup(of: LocationOutcome?.self) { group in
             group.addTask {
-                var worst: LocationOutcome = .timeout
                 for await fix in stream {
                     onFix?(fix)
                     switch settings.evaluate(fix, now: now()) {
                     case .accepted: return .fix(fix)
-                    case .mock: worst = .mock
-                    case .lowAccuracy, .stale: if worst != .mock { worst = .lowAccuracy }
+                    case .mock: rejected.note(.mock)
+                    case .lowAccuracy, .stale: rejected.note(.lowAccuracy)
                     }
                 }
-                return worst == .timeout ? .unavailable : worst
+                return rejected.worst ?? .unavailable
             }
             group.addTask {
                 try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
@@ -103,7 +113,7 @@ public enum LocationCollector {
             let first = await group.next() ?? nil
             group.cancelAll()
             if let first { return first }
-            return .timeout
+            return rejected.worst ?? .timeout
         }
     }
 }

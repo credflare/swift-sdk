@@ -37,7 +37,7 @@ final class ContactCodeModel: ObservableObject {
             sent = try await client.requestCode(channel, to: destination)
             code = ""; stage = .code
         } catch let error as CredflareError {
-            if case .api(422, _, _, _) = error {
+            if case .api(422, _, _) = error {
                 let rejection = Rejection(error, requester: verifier, contact: help)
                 if let next = rejection.resendAvailableAt { resendAt = next }
                 stage = .rejected(rejection)
@@ -55,7 +55,7 @@ final class ContactCodeModel: ObservableObject {
             _ = try await client.confirmCode(channel, code: code)
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, _, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
+            if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
             else { problem = text(CredflareSpec.CopyKey.errorsConfirmCodeFailed); stage = .code }
         } catch {
             problem = text(CredflareSpec.CopyKey.errorsConfirmCodeFailed); stage = .code

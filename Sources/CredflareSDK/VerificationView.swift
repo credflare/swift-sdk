@@ -70,8 +70,8 @@ private final class VerificationModel: ObservableObject {
     func show(_ cause: Error, fallback: String = Key.errorsGeneric) {
         if let error = cause as? CredflareError {
             switch error {
-            case .api(401, _, _, _): self.error = text(Key.errorsSessionExpired)
-            case .api(422, let message, _, _): self.error = message
+            case .api(401, _, _): self.error = text(Key.errorsSessionExpired)
+            case .api(422, let message, _): self.error = message
             case .validation(let message): self.error = message
             case .network: self.error = text(Key.errorsNetwork)
             default: self.error = text(fallback)

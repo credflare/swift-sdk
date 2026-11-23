@@ -54,6 +54,13 @@ public enum LocationCopy {
     }
 }
 
+public extension LocationCopy {
+    @available(*, deprecated, message: "Use Rejection(_:requester:reference:).message.")
+    static func rejection(_ error: CredflareError, reference: PlaceReference?) -> String {
+        Rejection(error, requester: nil, reference: reference).message
+    }
+}
+
 public enum LocationAuthorization: Sendable { case granted, denied, unavailable }
 
 public protocol LocationSource: AnyObject {

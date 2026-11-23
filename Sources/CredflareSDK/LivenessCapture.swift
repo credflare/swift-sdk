@@ -120,8 +120,14 @@ public enum LivenessSubmitter {
 }
 
 public enum LivenessRejection {
+    @available(*, deprecated, message: "Use Rejection(_:requester:), whose action says when a new challenge is needed.")
+    public static let restartCodes: Set<RejectionCode> = [.livenessChallengeExpired, .livenessChallengeInvalid, .livenessChallengeUsed, .livenessFrameOutOfWindow]
+
+    @available(*, deprecated, message: "Use Rejection(_:requester:).message.")
+    public static func message(for error: CredflareError) -> String { Rejection(error, requester: nil).message }
+
     public static func needsNewChallenge(_ error: CredflareError) -> Bool {
-        if case .api(422, _, _, _) = error { return true }
+        if case .api(422, _, _) = error { return true }
         return false
     }
 }

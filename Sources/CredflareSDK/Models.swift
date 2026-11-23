@@ -135,7 +135,11 @@ public struct Evidence: Encodable {
 }
 public struct RejectionCode: RawRepresentable, Hashable, Sendable, CustomStringConvertible {
     public let rawValue: String
-    public init(rawValue: String) { self.rawValue = rawValue }
+    public let resendAvailableAt: String?
+    public init(rawValue: String) { self.init(rawValue: rawValue, resendAvailableAt: nil) }
+    public init(rawValue: String, resendAvailableAt: String?) { self.rawValue = rawValue; self.resendAvailableAt = resendAvailableAt }
+    public static func == (lhs: RejectionCode, rhs: RejectionCode) -> Bool { lhs.rawValue == rhs.rawValue }
+    public func hash(into hasher: inout Hasher) { hasher.combine(rawValue) }
     public var isKnown: Bool { CredflareSpec.ErrorCode.meanings[rawValue] != nil }
     public var description: String { rawValue }
     public static let locationAccuracy = RejectionCode(rawValue: CredflareSpec.ErrorCode.locationAccuracy)
@@ -169,14 +173,17 @@ public struct RejectionCode: RawRepresentable, Hashable, Sendable, CustomStringC
 }
 
 public enum CredflareError: LocalizedError {
-    case validation(String), network(String), api(Int, String, code: RejectionCode?, resendAvailableAt: String? = nil), invalidResponse
+    case validation(String), network(String), api(Int, String, code: RejectionCode?), invalidResponse
     public var errorDescription: String? {
-        switch self { case .validation(let v), .network(let v), .api(_, let v, _, _): return v; case .invalidResponse: return "Credflare returned an invalid response." }
+        switch self { case .validation(let v), .network(let v), .api(_, let v, _): return v; case .invalidResponse: return "Credflare returned an invalid response." }
     }
-    public var code: RejectionCode? { if case .api(_, _, let code, _) = self { return code }; return nil }
-    public var resendAvailableAt: Date? { if case .api(_, _, _, let value?) = self { return ISO8601.parse(value) }; return nil }
+    public var code: RejectionCode? { if case .api(_, _, let code) = self { return code }; return nil }
+    public var resendAvailableAt: Date? { code?.resendAvailableAt.flatMap(ISO8601.parse) }
     public var type: String {
-        switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _, _, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
+        switch self { case .validation: return "validation"; case .network: return "network"; case .invalidResponse: return "api"; case .api(let status, _, _): return status == 401 ? "session_unavailable" : status == 409 ? "verification_closed" : status == 422 ? "validation" : "api" }
     }
 }
-public enum VerificationResult: Equatable { case submitted, cancelled, hostActionRequired(code: RejectionCode? = nil) }
+public enum VerificationResult: Equatable {
+    case submitted, cancelled, hostActionRequired(code: RejectionCode? = nil)
+    public static var hostActionRequired: VerificationResult { .hostActionRequired(code: nil) }
+}

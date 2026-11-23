@@ -216,7 +216,7 @@ final class ClientTests: XCTestCase {
             let expected = (try JSONSerialization.jsonObject(with: fixture(name)) as! [String: Any])["message"] as! String
             do { _ = try await VerificationSession(try descriptor(token)).submitLocation(location(mock: false), key: UUID()); XCTFail("Expected rejection") }
             catch let error as CredflareError {
-                guard case .api(let status, let message, let parsed, _) = error else { return XCTFail("Unexpected \(error)") }
+                guard case .api(let status, let message, let parsed) = error else { return XCTFail("Unexpected \(error)") }
                 XCTAssertEqual(status, 422)
                 XCTAssertEqual(message, expected)
                 XCTAssertEqual(parsed, code)

@@ -43,7 +43,7 @@ public actor VerificationSession {
         guard let http = response as? HTTPURLResponse else { throw CredflareError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            throw CredflareError.api(http.statusCode, json?["message"] as? String ?? "Request failed.", code: (json?["code"] as? String).map(RejectionCode.init(rawValue:)), resendAvailableAt: json?["resend_available_at"] as? String)
+            throw CredflareError.api(http.statusCode, json?["message"] as? String ?? "Request failed.", code: (json?["code"] as? String).map { RejectionCode(rawValue: $0, resendAvailableAt: json?["resend_available_at"] as? String) })
         }
         guard let envelope = try? JSONDecoder().decode(Envelope<T>.self, from: data) else { throw CredflareError.invalidResponse }
         guard envelope.success else { throw CredflareError.api(http.statusCode, envelope.message ?? "Request failed.", code: nil) }

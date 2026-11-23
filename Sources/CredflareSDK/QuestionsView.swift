@@ -33,7 +33,7 @@ final class QuestionsModel: ObservableObject {
             _ = try await client.submitAnswers(questionnaire.fields(answers), key: submitKey)
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, _, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
+            if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
             else { problem = CredflareCopy.text(CredflareSpec.CopyKey.errorsSendAnswersFailed); stage = .form }
         } catch {
             problem = CredflareCopy.text(CredflareSpec.CopyKey.errorsSendAnswersFailed); stage = .form

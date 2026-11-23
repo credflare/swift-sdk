@@ -248,4 +248,23 @@ extension ClientTests {
         XCTAssertTrue(questionnaire.hasOutstanding)
         XCTAssertEqual(questionnaire.profile?.nextStepsCopyKey, CredflareSpec.CopyKey.documentsHostStepsNext)
     }
+
+    @available(*, deprecated)
+    func testEarlierPublicAPIStillCompiles() async throws {
+        do { _ = try await VerificationSession(try descriptor("reject:phone.send_limit")).requestCode(.phone, to: "+237650000001"); XCTFail("Expected rejection") }
+        catch CredflareError.api(let status, let message, let code) {
+            XCTAssertEqual(status, 422)
+            XCTAssertFalse(message.isEmpty)
+            XCTAssertEqual(code, .phoneSendLimit)
+        }
+        let result: VerificationResult = .hostActionRequired
+        XCTAssertEqual(result, .hostActionRequired(code: nil))
+        switch VerificationResult.hostActionRequired(code: .phoneSendLimit) {
+        case .submitted, .cancelled: XCTFail("Expected host action")
+        case .hostActionRequired: break
+        }
+        XCTAssertTrue(LivenessRejection.restartCodes.contains(.livenessChallengeExpired))
+        XCTAssertEqual(LivenessRejection.message(for: .api(422, "", code: .livenessChallengeExpired)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
+        XCTAssertEqual(LocationCopy.rejection(.api(422, "Server said no.", code: nil), reference: nil), "Server said no.")
+    }
 }

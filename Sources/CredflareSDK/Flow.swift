@@ -35,7 +35,7 @@ extension VerificationSession {
         do {
             let info = try await get()
             return .next(info, info.nextStep)
-        } catch CredflareError.api(409, _, _, _) {
+        } catch CredflareError.api(409, _, _) {
             return .closed
         } catch {
             return .failed(CredflareCopy.text(CredflareSpec.CopyKey.errorsRefreshFailed))

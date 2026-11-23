@@ -13,12 +13,10 @@ public struct FacialSettings: Equatable, Sendable {
     public let gestures: [String]
     public let gestureCount: Int
     public let recordVideo: Bool
-    public let videoRetentionDays: Int?
     init(_ settings: JSONValue?) {
         gestures = settings?["gestures"]?.arrayValue?.compactMap(\.stringValue) ?? CredflareSpec.Settings.facialVerificationGesturesDefault
         gestureCount = settings?["gesture_count"]?.intValue ?? CredflareSpec.Settings.facialVerificationGestureCountDefault
         recordVideo = settings?["record_video"]?.boolValue ?? CredflareSpec.Settings.facialVerificationRecordVideoDefault
-        videoRetentionDays = settings?["video_retention_days"]?.intValue
     }
 }
 

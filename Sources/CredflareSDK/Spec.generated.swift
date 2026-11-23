@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.1.0 (f30a34ca3aac). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.1.0 (0532d98b68cc). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -68,7 +68,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.1.0"
-    public static let hash = "f30a34ca3aac"
+    public static let hash = "0532d98b68cc"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -237,15 +237,6 @@ public enum CredflareSpec {
                 max: nil,
                 options: [],
                 defaultJson: "true"
-            ),
-            SpecSetting(
-                path: "facial_verification.video_retention_days",
-                type: "int",
-                optional: true,
-                min: 1.0,
-                max: 3650.0,
-                options: [],
-                defaultJson: "null"
             ),
             SpecSetting(
                 path: "location_verification.max_accuracy_m",

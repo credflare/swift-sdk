@@ -57,16 +57,13 @@ struct QuestionsView: View {
             ), displayedComponents: .date)
             .labelsHidden().datePickerStyle(.compact).frame(maxWidth: .infinity)
             .opacity(Questionnaire.isEmpty(model.answers[question.key] ?? .null) ? 0.6 : 1)
-            if model.canClear(question) {
-                Button(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersRemove)) { model.clear(question) }
-                    .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary)
-                    .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeLinkHeight))
-                    .accessibilityLabel(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersRemove) + ", " + question.label)
-            }
+            remove(question, theme: theme)
         case "select", "single_select":
             choice(question, placeholder: CredflareSpec.CopyKey.questionsChooseOne, options: question.options.map { ($0, $0) }, theme: theme)
+            remove(question, theme: theme)
         case "country":
             choice(question, placeholder: CredflareSpec.CopyKey.questionsChooseCountry, options: QuestionsModel.countries.map { ($0.code, $0.name) }, theme: theme)
+            remove(question, theme: theme)
         case "multi_select":
             VStack(spacing: CGFloat(CredflareSpec.Tokens.spacingXs)) {
                 ThemedText(CredflareCopy.text(CredflareSpec.CopyKey.questionsChooseMany), style: CredflareSpec.Tokens.typeSmall, tone: \.muted)
@@ -117,12 +114,20 @@ struct QuestionsView: View {
         }
     }
 
+    @ViewBuilder private func remove(_ question: Question, theme: CredflareTheme) -> some View {
+        if model.canClear(question) {
+            let label = CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersRemove)
+            Button(label) { model.clear(question) }
+                .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary)
+                .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeLinkHeight))
+                .accessibilityLabel(label + ", " + question.label)
+        }
+    }
+
     private func choice(_ question: Question, placeholder: String, options: [(String, String)], theme: CredflareTheme) -> some View {
         let selected = model.answers[question.key]?.stringValue
-        let clearable = model.canClear(question)
         return Menu {
-            Picker(question.label, selection: Binding(get: { selected ?? "" }, set: { $0.isEmpty ? model.clear(question) : model.set(question.key, .string($0)) })) {
-                if clearable { Text(CredflareCopy.text(placeholder)).tag("") }
+            Picker(question.label, selection: Binding(get: { selected ?? "" }, set: { model.set(question.key, .string($0)) })) {
                 ForEach(options, id: \.0) { value, name in Text(name).tag(value) }
             }
         } label: {

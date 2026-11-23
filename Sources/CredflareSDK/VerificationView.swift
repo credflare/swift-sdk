@@ -641,6 +641,7 @@ extension VerificationModel {
         case "receipt":
             let host = screen == "receipt_host_steps"
             model.info = previewSession(documents: false, requirements: [], form: host)
+            model.handedBack = host
             model.received = [CredflareCopy.text(CredflareSpec.CopyKey.receiptDocument, ["document": "Demo identity document"]), CredflareCopy.text(CredflareSpec.CopyKey.receiptAnswers), CredflareCopy.text(CredflareSpec.CopyKey.receiptPhone), CredflareCopy.text(CredflareSpec.CopyKey.receiptSelfie), CredflareCopy.text(CredflareSpec.CopyKey.receiptLocation)]
         default: break
         }

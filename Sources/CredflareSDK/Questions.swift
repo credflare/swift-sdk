@@ -9,6 +9,8 @@ public struct Question: Identifiable, Sendable {
     public let min: Double?
     public let max: Double?
     public let showIf: ShowIf?
+    var minText: String?
+    var maxText: String?
     public var id: String { key }
     init(_ raw: JSONValue) {
         key = raw["key"]?.stringValue ?? ""
@@ -18,6 +20,8 @@ public struct Question: Identifiable, Sendable {
         options = raw["options"]?.arrayValue?.compactMap(\.stringValue) ?? []
         min = raw["min"]?.doubleValue
         max = raw["max"]?.doubleValue
+        minText = min.map { "\($0)" }
+        maxText = max.map { "\($0)" }
         showIf = ShowIf(raw["show_if"])
     }
     public var isSupported: Bool { CredflareSpec.Requirements.questionsTypes.contains(type) }
@@ -29,9 +33,16 @@ public struct Questionnaire: Sendable {
     public let earlierAnswers: [String: JSONValue]
     var numberTexts: [String: String] = [:]
     public init(questions: [Question], earlierAnswers: [String: JSONValue] = [:]) { self.questions = questions; self.earlierAnswers = earlierAnswers }
-    init?(_ schema: JSONValue?, earlierAnswers: [String: JSONValue] = [:], numberTexts: [String: String] = [:]) {
+    init?(_ schema: JSONValue?, earlierAnswers: [String: JSONValue] = [:], numberTexts: [String: String] = [:], schemaTexts: [RawJSON?] = []) {
         guard let list = schema?.arrayValue, !list.isEmpty else { return nil }
-        self.init(questions: list.map(Question.init), earlierAnswers: earlierAnswers)
+        let questions = list.enumerated().map { index, raw in
+            var question = Question(raw)
+            let texts = index < schemaTexts.count ? schemaTexts[index] : nil
+            if let text = texts?["min"]?.numberText, question.min != nil { question.minText = text }
+            if let text = texts?["max"]?.numberText, question.max != nil { question.maxText = text }
+            return question
+        }
+        self.init(questions: questions, earlierAnswers: earlierAnswers)
         self.numberTexts = numberTexts
     }
 
@@ -125,7 +136,14 @@ public struct Questionnaire: Sendable {
         return back.year == parts[0] && back.month == parts[1] && back.day == parts[2]
     }
 
-    static let countryCodes: Set<String> = Set(Locale.Region.isoRegions.map(\.identifier).filter { matches(CredflareSpec.Requirements.questionsCountryPattern, $0) })
+    static let reservedRegions: Set<String> = ["AC", "CP", "CQ", "DG", "EA", "EU", "EZ", "IC", "TA", "UN"]
+
+    static func isAssignedRegion(_ code: String) -> Bool {
+        matches(CredflareSpec.Requirements.questionsCountryPattern, code) && !reservedRegions.contains(code)
+            && code != "AA" && code != "ZZ" && !matches("^(Q[M-Z]|X[A-Z])$", code)
+    }
+
+    static let countryCodes: Set<String> = Set(Locale.Region.isoRegions.map(\.identifier).filter(isAssignedRegion))
 
     static func isCountry(_ value: String) -> Bool { countryCodes.contains(value) }
 
@@ -136,6 +154,10 @@ public struct Questionnaire: Sendable {
         default: return ""
         }
     }
+
+    static func isNumberText(_ text: String) -> Bool { matches(CredflareSpec.Requirements.questionsNumberPattern, text) }
+
+    static func decimal(_ text: String?) -> Decimal? { text.flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) } }
 
     static func number(_ answer: JSONValue) -> Decimal? {
         switch answer {
@@ -163,8 +185,8 @@ public struct Questionnaire: Sendable {
             return text.count > CredflareSpec.Requirements.questionsTextMaxLength ? Key.questionsTextTooLong : nil
         case "number":
             guard let value = number(answer) else { return Key.questionsInvalidNumber }
-            if let min = question.min, value < Decimal(min) { return Key.questionsNumberMin }
-            if let max = question.max, value > Decimal(max) { return Key.questionsNumberMax }
+            if let min = decimal(question.minText), value < min { return Key.questionsNumberMin }
+            if let max = decimal(question.maxText), value > max { return Key.questionsNumberMax }
             return nil
         case "date": return text.map(isDate) == true ? nil : Key.questionsInvalidDate
         case "email": return text.map(isEmail) == true ? nil : Key.questionsInvalidEmail

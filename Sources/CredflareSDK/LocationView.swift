@@ -11,11 +11,12 @@ final class LocationModel: ObservableObject {
     private let client: VerificationSession
     private let makeSource: () -> LocationSource
     private let onDone: () -> Void
+    private let onClosed: () -> Void
     private var failures = 0
     private var submitKey = UUID()
 
-    init(client: VerificationSession, settings: LocationSettings, verifier: String, makeSource: @escaping () -> LocationSource, onDone: @escaping () -> Void) {
-        self.client = client; self.settings = settings; self.verifier = verifier; self.makeSource = makeSource; self.onDone = onDone
+    init(client: VerificationSession, settings: LocationSettings, verifier: String, makeSource: @escaping () -> LocationSource, onClosed: @escaping () -> Void = {}, onDone: @escaping () -> Void) {
+        self.client = client; self.settings = settings; self.verifier = verifier; self.makeSource = makeSource; self.onDone = onDone; self.onClosed = onClosed
     }
 
     func locate() async {
@@ -45,7 +46,7 @@ final class LocationModel: ObservableObject {
             _ = try await client.submitLocation(fix.submission(), key: submitKey)
             onDone()
         } catch let error as CredflareError {
-            if case .api(409, _, _) = error { onDone() }
+            if case .api(409, _, _) = error { onClosed() }
             else if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help, reference: settings.reference)) }
             else { stage = .failed(text(CredflareSpec.CopyKey.errorsSendLocationFailed), retry: true) }
         } catch {

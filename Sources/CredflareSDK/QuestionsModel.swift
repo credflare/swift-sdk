@@ -14,10 +14,11 @@ final class QuestionsModel: ObservableObject {
     private let client: VerificationSession
     private let onDone: () -> Void
     private let onHandBack: () -> Void
+    private let onClosed: () -> Void
     private var submitKey = UUID()
 
-    init(client: VerificationSession, questionnaire: Questionnaire, verifier: String, onHandBack: @escaping () -> Void = {}, onDone: @escaping () -> Void) {
-        self.client = client; self.questionnaire = questionnaire; self.verifier = verifier; self.onDone = onDone; self.onHandBack = onHandBack
+    init(client: VerificationSession, questionnaire: Questionnaire, verifier: String, onHandBack: @escaping () -> Void = {}, onClosed: @escaping () -> Void = {}, onDone: @escaping () -> Void) {
+        self.client = client; self.questionnaire = questionnaire; self.verifier = verifier; self.onDone = onDone; self.onHandBack = onHandBack; self.onClosed = onClosed
         answers = questionnaire.startingAnswers
     }
 
@@ -29,6 +30,12 @@ final class QuestionsModel: ObservableObject {
         if questionnaire.unsupportedQuestionShown(answers) { onHandBack() }
     }
 
+    func canClear(_ question: Question) -> Bool {
+        !question.required && !Questionnaire.isEmpty(question, answers[question.key] ?? .null)
+    }
+
+    func clear(_ question: Question) { set(question.key, .null) }
+
     func send() async {
         guard stage == .form else { return }
         errors = questionnaire.errors(answers)
@@ -38,7 +45,7 @@ final class QuestionsModel: ObservableObject {
             _ = try await client.submitAnswers(questionnaire.fields(answers), key: submitKey)
             onDone()
         } catch let error as CredflareError {
-            if case .api(409, _, _) = error { onDone() }
+            if case .api(409, _, _) = error { onClosed() }
             else if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
             else { problem = CredflareCopy.text(CredflareSpec.CopyKey.errorsSendAnswersFailed); stage = .form }
         } catch {
@@ -48,7 +55,7 @@ final class QuestionsModel: ObservableObject {
 
     static let countries: [(code: String, name: String)] = Locale.Region.isoRegions
         .map(\.identifier)
-        .filter { $0.range(of: CredflareSpec.Requirements.questionsCountryPattern, options: .regularExpression) != nil }
+        .filter(Questionnaire.isAssignedRegion)
         .compactMap { code in Locale.current.localizedString(forRegionCode: code).map { (code, $0) } }
         .sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
 }

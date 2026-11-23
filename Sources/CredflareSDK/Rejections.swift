@@ -25,6 +25,7 @@ public struct Rejection: Equatable, Sendable {
     public let help: String
     public let helpLink: URL?
     public let resendAvailableAt: Date?
+    public let waitingCode: ContactCodeSent?
     public var actionLabel: String { action.label }
     public var leaveResult: VerificationResult? { action == .leave ? .hostActionRequired(code: code) : nil }
 
@@ -33,6 +34,7 @@ public struct Rejection: Equatable, Sendable {
         let values = ["verifier": verifier]
         requestedBy = CredflareCopy.text(CredflareSpec.Rejection.requestedBy, values)
         resendAvailableAt = error.resendAvailableAt
+        waitingCode = error.code?.waitingCode
         if let email = contact.email {
             help = CredflareCopy.text(CredflareSpec.Rejection.helpEmail, ["verifier": verifier, "help_email": email])
             var mail = URLComponents(); mail.scheme = "mailto"; mail.path = email

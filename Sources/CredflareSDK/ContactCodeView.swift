@@ -48,7 +48,7 @@ struct ContactCodeView: View {
                         if model.canResend && wait > 0 {
                             ThemedText(model.text(CredflareSpec.CopyKey.contactCodeResendIn, ["seconds": String(wait)]), style: CredflareSpec.Tokens.typeSmall, tone: \.muted)
                         } else if model.canResend {
-                            SecondaryButton(model.text(CredflareSpec.CopyKey.contactCodeResend)) { Task { await model.send() } }
+                            SecondaryButton(model.text(CredflareSpec.CopyKey.contactCodeResend)) { Task { await model.resend() } }
                         }
                         if model.changeAfter && wait > 0 {
                             ThemedText(model.text(email ? CredflareSpec.CopyKey.emailChangeAfter : CredflareSpec.CopyKey.phoneChangeAfter), style: CredflareSpec.Tokens.typeSmall, tone: \.muted)

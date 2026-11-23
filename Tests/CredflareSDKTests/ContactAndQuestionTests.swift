@@ -250,7 +250,7 @@ extension ClientTests {
     }
 
     @MainActor
-    func testResendTooSoonWithoutALocalCodeOpensCodeEntryForTheTypedDestination() async throws {
+    func testResendTooSoonWithoutALocalCodeOpensCodeEntryForTheWaitingDestination() async throws {
         let raw = try JSONSerialization.jsonObject(with: fixture("rejections/email.resend_too_soon")) as! [String: Any]
         let model = ContactCodeModel(client: VerificationSession(try descriptor("reject:email.resend_too_soon")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
         model.destination = "jane@example.test"
@@ -259,12 +259,33 @@ extension ClientTests {
         XCTAssertEqual(rejection.action, .wait)
         await model.perform(rejection)
         XCTAssertEqual(model.stage, .code)
-        XCTAssertNil(model.sent)
-        XCTAssertEqual(model.destination, "jane@example.test")
+        XCTAssertEqual(model.sent?.destination, raw["destination"] as? String)
+        XCTAssertNotEqual(model.sent?.destination, "jane@example.test")
+        XCTAssertEqual(model.sent?.expiresAt, raw["expires_at"] as? String)
+        XCTAssertEqual(model.sent?.sendsRemaining, raw["sends_remaining"] as? Int)
+        XCTAssertTrue(model.changeAfter)
         let deadline = try XCTUnwrap(ISO8601.parse(raw["resend_available_at"] as! String))
         XCTAssertEqual(model.resendAt, deadline)
         XCTAssertEqual(model.secondsUntilResend(now: deadline.addingTimeInterval(-30)), 30)
         XCTAssertTrue(model.canResend)
+        await model.resend()
+        XCTAssertEqual(model.stage, .destination)
+        XCTAssertEqual(model.destination, "jane@example.test")
+        let sends = try await requests("/email-codes")
+        XCTAssertEqual(sends.count, 1)
+    }
+
+    @MainActor
+    func testResendingTheSameAddressAfterAReloadNamesItWithoutTheChangeNote() async throws {
+        let raw = try JSONSerialization.jsonObject(with: fixture("rejections/phone.resend_too_soon")) as! [String: Any]
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("reject:phone.resend_too_soon")), channel: .phone, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        model.destination = "+237 650 000 001"
+        await model.send()
+        guard case .rejected(let rejection) = model.stage else { return XCTFail("Expected the wait screen") }
+        await model.perform(rejection)
+        XCTAssertEqual(model.stage, .code)
+        XCTAssertEqual(model.sent?.destination, raw["destination"] as? String)
+        XCTAssertFalse(model.changeAfter)
     }
 
     func sentWithNoSendsLeft() throws -> ContactCodeSent {
@@ -281,7 +302,7 @@ extension ClientTests {
         var result: VerificationResult?
         let model = ContactCodeModel(client: VerificationSession(try descriptor("reject:email.send_limit")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { result = $0 })
         model.destination = "jane@example.test"
-        model.sent = try sentWithNoSendsLeft(); model.stage = .code
+        model.sent = try sentWithNoSendsLeft(); model.sentTo = "jane@example.test"; model.stage = .code
         XCTAssertFalse(model.canResend)
         await model.perform(Rejection(.api(422, "", code: .emailCodeExpired), requester: nil))
         guard case .rejected(let limit) = model.stage else { return XCTFail("Expected the send limit screen") }
@@ -296,7 +317,7 @@ extension ClientTests {
     @MainActor
     func testANewDestinationRefusedDuringCooldownKeepsTheEarlierCodeEntry() async throws {
         let model = ContactCodeModel(client: VerificationSession(try descriptor("cooldown")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
-        model.destination = "jane@example.test"
+        model.destination = "sam.example1@example.test"
         await model.send()
         XCTAssertEqual(model.stage, .code)
         model.changeDestination()
@@ -305,26 +326,30 @@ extension ClientTests {
         guard case .rejected(let wait) = model.stage else { return XCTFail("Expected the wait screen") }
         await model.perform(wait)
         XCTAssertEqual(model.stage, .code)
-        XCTAssertEqual(model.destination, "jane@example.test")
+        XCTAssertEqual(model.destination, "sam.example1@example.test")
         XCTAssertTrue(model.changeAfter)
         let raw = try JSONSerialization.jsonObject(with: fixture("rejections/email.resend_too_soon")) as! [String: Any]
+        XCTAssertEqual(model.sent?.destination, raw["destination"] as? String)
         XCTAssertEqual(model.resendAt, ISO8601.parse(raw["resend_available_at"] as! String))
         let sends = try await requests("/email-codes")
-        XCTAssertEqual(sends.compactMap { try? json($0)["email"] as? String }, ["jane@example.test", "other@example.test"])
+        XCTAssertEqual(sends.compactMap { try? json($0)["email"] as? String }, ["sam.example1@example.test", "other@example.test"])
     }
 
     @MainActor
     func testACaseClosedDuringSubmitOrConfirmGoesOnToTheReceipt() async throws {
         let client = VerificationSession(try descriptor("submit-closed"))
-        var finished = 0
+        var finished = 0, closed = 0
         let schema = try XCTUnwrap(SessionInfo.decodeFixture("questionnaire-session").profile?.questionnaire)
-        let questions = QuestionsModel(client: client, questionnaire: schema, verifier: "Acme Bank") { finished += 1 }
+        let questions = QuestionsModel(client: client, questionnaire: schema, verifier: "Acme Bank", onClosed: { closed += 1 }) { finished += 1 }
         for (key, value) in ["country": JSONValue.string("DE"), "employment": .string("Retired"), "birth_date": .string("1950-01-01"), "terms": .bool(true)] { questions.set(key, value) }
         await questions.send()
-        let codes = ContactCodeModel(client: client, channel: .phone, verifier: "Acme Bank", onDone: { finished += 1 }, onLeave: { _ in })
+        let codes = ContactCodeModel(client: client, channel: .phone, verifier: "Acme Bank", onDone: { finished += 1 }, onLeave: { _ in }, onClosed: { closed += 1 })
         codes.stage = .code; codes.setCode("123456")
         await codes.confirm()
-        XCTAssertEqual(finished, 2)
+        codes.stage = .destination; codes.destination = "+237650000001"
+        await codes.send()
+        XCTAssertEqual(finished, 0)
+        XCTAssertEqual(closed, 3)
     }
 
     @MainActor
@@ -407,5 +432,95 @@ extension ClientTests {
         XCTAssertTrue(LivenessRejection.restartCodes.contains(.livenessChallengeExpired))
         XCTAssertEqual(LivenessRejection.message(for: .api(422, "", code: .livenessChallengeExpired)), CredflareCopy.text(CredflareSpec.CopyKey.livenessExpired))
         XCTAssertEqual(LocationCopy.rejection(.api(422, "Server said no.", code: nil), reference: nil), "Server said no.")
+        let results: Set<VerificationResult> = [.submitted, .cancelled, .hostActionRequired, .hostActionRequired(code: .phoneSendLimit), .submitted]
+        XCTAssertEqual(results.count, 4)
+        XCTAssertEqual([VerificationResult.cancelled: 1][.cancelled], 1)
+    }
+
+    @MainActor
+    func testResendGoesToTheAddressTheCodeWasSentToAfterAnAbandonedChange() async throws {
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("capture")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        model.destination = "jane@example.test"
+        await model.send()
+        XCTAssertEqual(model.stage, .code)
+        model.changeDestination()
+        model.destination = "other@example.test"
+        model.returnToCode()
+        XCTAssertEqual(model.stage, .code)
+        XCTAssertEqual(model.destination, "jane@example.test")
+        model.changeDestination()
+        model.destination = "other@example.test"
+        model.stage = .code
+        await model.resend()
+        let sends = try await requests("/email-codes")
+        XCTAssertEqual(sends.compactMap { try? json($0)["email"] as? String }, ["jane@example.test", "jane@example.test"])
+    }
+
+    @MainActor
+    func testTheLastCodeStaysEnterableWhenTheSameAddressIsSentAgain() async throws {
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("last-send")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        model.destination = "jane@example.test"
+        await model.send()
+        XCTAssertEqual(model.sent?.sendsRemaining, 0)
+        XCTAssertFalse(model.canResend)
+        model.changeDestination()
+        model.destination = " jane@example.test "
+        await model.send()
+        XCTAssertEqual(model.stage, .code)
+        XCTAssertNil(model.problem)
+        let sends = try await requests("/email-codes")
+        XCTAssertEqual(sends.count, 1)
+    }
+
+    @MainActor
+    func testOptionalAnswersAskedAgainCanBeClearedToNull() async throws {
+        let schema = try XCTUnwrap(SessionInfo.decodeFixture("questionnaire-session").profile?.formSchema?.arrayValue)
+        let earlier: [String: JSONValue] = ["country": .string("DE"), "birth_date": .string("1990-05-17"), "employment": .string("Employed")]
+        for key in earlier.keys.sorted() {
+            guard case .object(var fields)? = schema.first(where: { $0["key"]?.stringValue == key }) else { return XCTFail(key) }
+            fields["required"] = .bool(false)
+            let questionnaire = try XCTUnwrap(Questionnaire(.array([.object(fields)]), earlierAnswers: [key: earlier[key]!]))
+            let model = QuestionsModel(client: VerificationSession(try descriptor("earlier")), questionnaire: questionnaire, verifier: "Acme Bank") {}
+            let question = try XCTUnwrap(model.visible.first)
+            XCTAssertTrue(model.canClear(question), key)
+            model.clear(question)
+            XCTAssertFalse(model.canClear(question), key)
+            await model.send()
+            let submits = try await requests("/submit")
+            let body = try json(XCTUnwrap(submits.last))
+            XCTAssertEqual((body["fields"] as? [String: Any])?.count, 1, key)
+            XCTAssertTrue((body["fields"] as? [String: Any])?[key] is NSNull, key)
+        }
+        let required = try XCTUnwrap(Questionnaire(.array(schema), earlierAnswers: earlier))
+        let model = QuestionsModel(client: VerificationSession(try descriptor("earlier")), questionnaire: required, verifier: "Acme Bank") {}
+        XCTAssertFalse(model.canClear(try XCTUnwrap(model.visible.first { $0.key == "country" })))
+    }
+
+    @MainActor
+    func testALongEarlierNumberIsSentBackWithEveryDigit() async throws {
+        let digits = String(repeating: "9", count: 42)
+        let client = VerificationSession(try descriptor("earlier-number"))
+        guard case .questions(let questionnaire) = try await client.get().nextStep else { return XCTFail("Expected the questionnaire") }
+        XCTAssertEqual(Questionnaire.displayText(questionnaire.startingAnswers["employer"]), digits)
+        let model = QuestionsModel(client: client, questionnaire: questionnaire, verifier: "Acme Bank") {}
+        await model.send()
+        let submits = try await requests("/submit")
+        let body = try XCTUnwrap(submits.first?["body"] as? String)
+        XCTAssertTrue(body.contains("\"" + digits + "\""), body)
+    }
+
+    @MainActor
+    func testANumberAtADecimalLimitIsAccepted() async throws {
+        let client = VerificationSession(try descriptor("earlier-max"))
+        guard case .questions(let questionnaire) = try await client.get().nextStep else { return XCTFail("Expected the questionnaire") }
+        XCTAssertNil(questionnaire.errors(["employer": .string("1.14")])["employer"])
+        XCTAssertEqual(questionnaire.errors(["employer": .string("1.1400000000000000001")])["employer"], CredflareSpec.CopyKey.questionsNumberMax)
+        let model = QuestionsModel(client: client, questionnaire: questionnaire, verifier: "Acme Bank") {}
+        model.set("employer", .string("1.14"))
+        await model.send()
+        XCTAssertEqual(model.errors, [:])
+        let submits = try await requests("/submit")
+        let body = try json(XCTUnwrap(submits.first))
+        XCTAssertEqual(body["fields"] as? [String: String], ["employer": "1.14"])
     }
 }

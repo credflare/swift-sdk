@@ -138,6 +138,11 @@ final class QuestionnaireRuleTests: XCTestCase {
         let questionnaire = Questionnaire(questions: [Question(try question("country"))])
         XCTAssertNil(questionnaire.errors(["country": .string("DE")])["country"])
         XCTAssertEqual(questionnaire.errors(["country": .string("ZZ")])["country"], Key.questionsChooseCountry)
+        for code in ["XK", "EU", "UN", "QO", "AC"] {
+            XCTAssertEqual(questionnaire.errors(["country": .string(code)])["country"], Key.questionsChooseCountry, code)
+            XCTAssertFalse(QuestionsModel.countries.contains { $0.code == code }, code)
+        }
+        XCTAssertEqual(Questionnaire.countryCodes.count, 249)
     }
 }
 

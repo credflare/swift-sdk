@@ -56,7 +56,13 @@ struct QuestionsView: View {
                 set: { model.set(question.key, .string(Self.dateFormatter.string(from: $0))) }
             ), displayedComponents: .date)
             .labelsHidden().datePickerStyle(.compact).frame(maxWidth: .infinity)
-            .opacity(model.answers[question.key] == nil ? 0.6 : 1)
+            .opacity(Questionnaire.isEmpty(model.answers[question.key] ?? .null) ? 0.6 : 1)
+            if model.canClear(question) {
+                Button(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersRemove)) { model.clear(question) }
+                    .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary)
+                    .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeLinkHeight))
+                    .accessibilityLabel(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersRemove) + ", " + question.label)
+            }
         case "select", "single_select":
             choice(question, placeholder: CredflareSpec.CopyKey.questionsChooseOne, options: question.options.map { ($0, $0) }, theme: theme)
         case "country":
@@ -113,8 +119,10 @@ struct QuestionsView: View {
 
     private func choice(_ question: Question, placeholder: String, options: [(String, String)], theme: CredflareTheme) -> some View {
         let selected = model.answers[question.key]?.stringValue
+        let clearable = model.canClear(question)
         return Menu {
-            Picker(question.label, selection: Binding(get: { selected ?? "" }, set: { model.set(question.key, .string($0)) })) {
+            Picker(question.label, selection: Binding(get: { selected ?? "" }, set: { $0.isEmpty ? model.clear(question) : model.set(question.key, .string($0)) })) {
+                if clearable { Text(CredflareCopy.text(placeholder)).tag("") }
                 ForEach(options, id: \.0) { value, name in Text(name).tag(value) }
             }
         } label: {

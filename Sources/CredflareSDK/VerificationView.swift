@@ -97,20 +97,20 @@ private final class VerificationModel: ObservableObject {
             clearSteps()
             questions = QuestionsModel(client: client, questionnaire: questionnaire, verifier: verifier, onHandBack: { [weak self] in
                 self?.handedBack = true; self?.clearSteps()
-            }) { [weak self] in
+            }, onClosed: { [weak self] in self?.closedCase() }) { [weak self] in
                 Task { @MainActor in await self?.finished(receipt: Key.receiptAnswers) }
             }
         case .check(let next):
             if let facial = next.facial {
                 guard liveness == nil else { return }
                 clearSteps()
-                liveness = LivenessModel(client: client, settings: facial, verifier: verifier, makeProvider: makeFaceProvider) { [weak self] in
+                liveness = LivenessModel(client: client, settings: facial, verifier: verifier, makeProvider: makeFaceProvider, onClosed: { [weak self] in self?.closedCase() }) { [weak self] in
                     Task { @MainActor in await self?.finished(receipt: Key.receiptSelfie) }
                 }
             } else if let settings = next.location {
                 guard location == nil else { return }
                 clearSteps()
-                location = LocationModel(client: client, settings: settings, verifier: verifier, makeSource: makeLocationSource) { [weak self] in
+                location = LocationModel(client: client, settings: settings, verifier: verifier, makeSource: makeLocationSource, onClosed: { [weak self] in self?.closedCase() }) { [weak self] in
                     Task { @MainActor in await self?.finished(receipt: Key.receiptLocation) }
                 }
             } else if let channel = next.contact {
@@ -118,7 +118,7 @@ private final class VerificationModel: ObservableObject {
                 clearSteps()
                 contact = ContactCodeModel(client: client, channel: channel, verifier: verifier, onDone: { [weak self] in
                     Task { @MainActor in await self?.finished(receipt: channel == .email ? Key.receiptEmail : Key.receiptPhone) }
-                }, onLeave: { [weak self] result in self?.onLeave(result) })
+                }, onLeave: { [weak self] result in self?.onLeave(result) }, onClosed: { [weak self] in self?.closedCase() })
             }
         case .documents, .receipt: clearSteps()
         }
@@ -131,6 +131,11 @@ private final class VerificationModel: ObservableObject {
     }
 
     private func clearSteps() { liveness = nil; location = nil; questions = nil; contact = nil }
+
+    private func closedCase() {
+        document = nil; captures = [:]; index = 0; error = nil
+        closed = true; pendingRefresh = false; clearSteps()
+    }
 
     private func finished(receipt: String) async {
         received.append(text(receipt))
@@ -215,7 +220,11 @@ private final class VerificationModel: ObservableObject {
             _ = try await client.submit(documentTypeID: document.id, evidence: evidence, key: submissionKey)
             received.append(text(Key.receiptDocument, ["document": document.documentType.name]))
             self.document = nil; captures = [:]; index = 0; pendingRefresh = true
-        } catch { show(error, fallback: Key.errorsSendDocumentFailed); working = false; return }
+        } catch {
+            working = false
+            if case .api(409, _, _)? = error as? CredflareError { return closedCase() }
+            show(error, fallback: Key.errorsSendDocumentFailed); return
+        }
         working = false
         await refresh()
     }

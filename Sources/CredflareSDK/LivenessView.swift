@@ -16,14 +16,15 @@ final class LivenessModel: ObservableObject {
     private let client: VerificationSession
     private let makeProvider: () -> FaceSignalProvider
     private let onDone: () -> Void
+    private let onClosed: () -> Void
     private var camera: CameraController?
     private var capture: LivenessCapture?
     private var pending: LivenessEvidence?
     private var keys: [String: UUID] = [:]
     private var finishing = false
 
-    init(client: VerificationSession, settings: FacialSettings, verifier: String, makeProvider: @escaping () -> FaceSignalProvider, onDone: @escaping () -> Void) {
-        self.client = client; self.settings = settings; self.verifier = verifier; self.makeProvider = makeProvider; self.onDone = onDone
+    init(client: VerificationSession, settings: FacialSettings, verifier: String, makeProvider: @escaping () -> FaceSignalProvider, onClosed: @escaping () -> Void = {}, onDone: @escaping () -> Void) {
+        self.client = client; self.settings = settings; self.verifier = verifier; self.makeProvider = makeProvider; self.onDone = onDone; self.onClosed = onClosed
         total = settings.gestureCount
     }
 
@@ -99,7 +100,7 @@ final class LivenessModel: ObservableObject {
             if case .api(409, _, _) = error {
                 pending = nil
                 if let video = evidence.video { try? FileManager.default.removeItem(at: video) }
-                onDone()
+                onClosed()
             } else if LivenessRejection.needsNewChallenge(error) {
                 pending = nil
                 if let video = evidence.video { try? FileManager.default.removeItem(at: video) }

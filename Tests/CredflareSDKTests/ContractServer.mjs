@@ -16,7 +16,11 @@ function caseSession(token) {
  return ['requirement-added-session',200,(json) => { json.data.profile.verification_requirements = []; return json; }];
 }
 let cooldownSends = 0;
+const numberQuestion = (raw, extra) => raw.replace(/"type": "text",\s*"required": true/, `"type": "number", "required": false${extra}`);
 function route(req, token, body) {
+ if (token === 'Bearer earlier-number' && req.method === 'GET') return ['questionnaire-earlier-answers-session',200,null,(raw) => numberQuestion(raw, '').replace('"employment": "Employed"', '"employment": "Employed", "employer": 999999999999999999999999999999999999999999')];
+ if (token === 'Bearer earlier-max' && req.method === 'GET') return ['questionnaire-earlier-answers-session',200,null,(raw) => numberQuestion(raw, ', "max": 1.14')];
+ if (token === 'Bearer last-send' && req.url.endsWith('-codes')) return ['email-code-request',202,(json) => { json.data.sends_remaining = 0; return json; }];
  if (token === 'Bearer unauthorized') return ['unauthorized',401];
  if (token === 'Bearer submit-closed' && req.method === 'POST') return ['session-closed',409];
  if (token === 'Bearer cooldown' && req.url.endsWith('-codes')) return cooldownSends++ === 0 ? ['email-code-request',202] : ['rejections/email.resend_too_soon',422];
@@ -65,9 +69,9 @@ const server = createServer(async (req,res) => {
  if (token === 'Bearer drop-submit' && req.url.endsWith('/submit') && !droppedSubmit) {droppedSubmit = true;return req.socket.destroy();}
  const rejection = /^Bearer reject:([a-z_.]+)$/.exec(token ?? '');
  if (rejection && req.method === 'POST') {res.writeHead(422,{'Content-Type':'application/json'});return res.end(await readFile(join(fixtures,'rejections',rejection[1]+'.json')));}
- const [fixture,status,change] = route(req, token, body);
+ const [fixture,status,change,edit] = route(req, token, body);
  res.writeHead(status,{'Content-Type':'application/json'});
  const raw = await readFile(join(fixtures,fixture+'.json'));
- res.end(change ? JSON.stringify(change(JSON.parse(raw))) : raw);
+ res.end(edit ? edit(raw.toString()) : change ? JSON.stringify(change(JSON.parse(raw))) : raw);
 });
 server.listen(0,'127.0.0.1',()=>console.log(server.address().port));

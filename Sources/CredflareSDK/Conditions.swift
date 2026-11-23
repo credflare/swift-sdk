@@ -158,15 +158,17 @@ public enum Conditions {
             return left.allSatisfy { key, value in other[key].map { loose(value, $0) } ?? false }
         }
         if let x = number(a), let y = number(b) { return x == y }
-        return text(a) == text(b)
+        return same(text(a), text(b))
     }
+
+    private static func same(_ a: String, _ b: String) -> Bool { a.utf16.elementsEqual(b.utf16) }
 
     private static func equals(_ actual: JSONValue, _ expected: JSONValue) -> Bool {
         if isContainer(actual) || isContainer(expected) { return loose(actual, expected) }
         if case .bool = actual { return boolean(actual) == boolean(expected) }
         if case .bool = expected { return boolean(actual) == boolean(expected) }
         if let x = number(actual), let y = number(expected) { return x == y }
-        return text(actual) == text(expected)
+        return same(text(actual), text(expected))
     }
 
     private static func time(_ value: String) -> Date? {
@@ -186,7 +188,10 @@ public enum Conditions {
     }
 
     private static func compare(_ actual: JSONValue, _ expected: JSONValue) -> Int? {
-        if let x = number(actual), let y = number(expected) { return x < y ? -1 : x > y ? 1 : 0 }
+        if let x = number(actual), let y = number(expected) {
+            let difference = x - y
+            return difference.isNaN ? nil : difference < 0 ? -1 : difference > 0 ? 1 : 0
+        }
         guard case .string(let a) = actual, case .string(let b) = expected, matches(datePattern, a), matches(datePattern, b) else { return nil }
         guard let x = time(a), let y = time(b) else { return nil }
         return x < y ? -1 : x > y ? 1 : 0
@@ -199,14 +204,16 @@ public enum Conditions {
     private static func contains(_ actual: JSONValue, _ expected: JSONValue) -> Bool {
         if let items = entries(actual) { return within(expected, items.map(\.1)) }
         if isScalar(actual), isScalar(expected), !text(expected).isEmpty {
-            return text(actual).lowercased().contains(text(expected).lowercased())
+            let haystack = Array(text(actual).lowercased().utf16), needle = Array(text(expected).lowercased().utf16)
+            guard needle.count <= haystack.count else { return false }
+            return (0...(haystack.count - needle.count)).contains { haystack[$0..<($0 + needle.count)].elementsEqual(needle) }
         }
         return false
     }
 
     private static func regex(_ actual: JSONValue, _ pattern: JSONValue) -> Bool {
         guard isScalar(actual), case .string(let source) = pattern, source.utf16.count <= CredflareSpec.Requirements.showIfMaxPatternLength,
-              let regex = try? NSRegularExpression(pattern: source) else { return false }
+              let regex = try? NSRegularExpression(pattern: asciiClasses(source)) else { return false }
         return matches(regex, text(actual))
     }
 
@@ -224,22 +231,65 @@ public enum Conditions {
         return similarity(normalize(actual), normalize(target)) >= minimum
     }
 
+    private static let scores = NSCache<NSString, NSNumber>()
+
     public static func similarity(_ a: String, _ b: String) -> Double {
         let x = Array(a.utf8), y = Array(b.utf8)
         guard x.count + y.count > 0 else { return 0 }
-        return Double(common(x[...], y[...]) * 2 * 100) / Double(x.count + y.count)
+        let key = "\(x.count):\(a)\u{0}\(b)" as NSString
+        if let score = scores.object(forKey: key) { return score.doubleValue }
+        let score = Double(common(x[...], y[...]) * 2 * 100) / Double(x.count + y.count)
+        scores.setObject(NSNumber(value: score), forKey: key)
+        return score
     }
 
     private static func common(_ a: ArraySlice<UInt8>, _ b: ArraySlice<UInt8>) -> Int {
-        var best = 0, p1 = a.startIndex, p2 = b.startIndex
-        for i in a.indices {
-            for j in b.indices {
-                var length = 0
-                while i + length < a.endIndex, j + length < b.endIndex, a[i + length] == b[j + length] { length += 1 }
-                if length > best { best = length; p1 = i; p2 = j }
+        guard !a.isEmpty, !b.isEmpty else { return 0 }
+        let x = Array(a), y = Array(b)
+        var next = [Int](repeating: 0, count: y.count + 1)
+        var row = next
+        var best = 0, p1 = 0, p2 = 0
+        for i in stride(from: x.count - 1, through: 0, by: -1) {
+            for j in stride(from: y.count - 1, through: 0, by: -1) {
+                let length = x[i] == y[j] ? next[j + 1] + 1 : 0
+                row[j] = length
+                if length > 0, length >= best { best = length; p1 = i; p2 = j }
             }
+            swap(&row, &next)
         }
         guard best > 0 else { return 0 }
-        return best + common(a[a.startIndex..<p1], b[b.startIndex..<p2]) + common(a[(p1 + best)...], b[(p2 + best)...])
+        return best + common(x[0..<p1], y[0..<p2]) + common(x[(p1 + best)...], y[(p2 + best)...])
+    }
+
+    static func asciiClasses(_ pattern: String) -> String {
+        let word = "A-Za-z0-9_"
+        var output = "", inClass = false, escaped = false
+        for character in pattern {
+            if escaped {
+                escaped = false
+                switch (character, inClass) {
+                case ("d", false): output += "[0-9]"
+                case ("D", false): output += "[^0-9]"
+                case ("w", false): output += "[\(word)]"
+                case ("W", false): output += "[^\(word)]"
+                case ("d", true): output += "0-9"
+                case ("w", true): output += word
+                case ("D", true): output += "[^0-9]"
+                case ("W", true): output += "[^\(word)]"
+                case ("b", false): output += "(?:(?<=[\(word)])(?![\(word)])|(?<![\(word)])(?=[\(word)]))"
+                case ("B", false): output += "(?:(?<=[\(word)])(?=[\(word)])|(?<![\(word)])(?![\(word)]))"
+                default: output += "\\" + String(character)
+                }
+                continue
+            }
+            switch character {
+            case "\\": escaped = true
+            case "[" where !inClass: inClass = true; output.append(character)
+            case "]" where inClass: inClass = false; output.append(character)
+            default: output.append(character)
+            }
+        }
+        if escaped { output += "\\" }
+        return output
     }
 }

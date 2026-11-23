@@ -102,6 +102,43 @@ final class QuestionnaireRuleTests: XCTestCase {
         guard case .receipt(let hostSteps) = info.nextStep else { return XCTFail("Expected the receipt") }
         XCTAssertFalse(hostSteps)
     }
+
+    func earlierSession(answer: String) throws -> SessionInfo {
+        let raw = try String(decoding: Data(contentsOf: Bundle.module.url(forResource: "questionnaire-earlier-answers-session", withExtension: "json", subdirectory: "Fixtures")!), as: UTF8.self)
+        let edited = raw
+            .replacingOccurrences(of: #""type": "text",\s*"required": true"#, with: #""type": "number", "required": false"#, options: .regularExpression)
+            .replacingOccurrences(of: #""employment": "Employed""#, with: #""employment": "Employed", "employer": \#(answer)"#)
+        struct Payload: Decodable { let data: SessionInfo }
+        return try JSONDecoder().decode(Payload.self, from: Data(edited.utf8)).data
+    }
+
+    func testEarlierNumbersKeepTheirDigitsAndShowInTheField() throws {
+        let questionnaire = try XCTUnwrap(earlierSession(answer: "9007199254740993").profile?.questionnaire)
+        XCTAssertEqual(questionnaire.questions.first?.type, "number")
+        let start = questionnaire.startingAnswers
+        XCTAssertEqual(Questionnaire.displayText(start["employer"]), "9007199254740993")
+        XCTAssertEqual(questionnaire.fields(start)["employer"]?.stringValue, "9007199254740993")
+        XCTAssertNil(questionnaire.fields(start)["employment"])
+        XCTAssertEqual(Questionnaire.displayText(.number(4500)), "4500")
+    }
+
+    func testClearingAnAnswerAskedAgainSendsNull() throws {
+        let questionnaire = try XCTUnwrap(earlierSession(answer: "4500").profile?.questionnaire)
+        var answers = questionnaire.startingAnswers
+        answers["employer"] = .string("  ")
+        XCTAssertEqual(questionnaire.errors(answers), [:])
+        let fields = questionnaire.fields(answers)
+        XCTAssertEqual(Array(fields.keys), ["employer"])
+        guard case .null? = fields["employer"] else { return XCTFail("Expected null") }
+        let body = String(decoding: try JSONEncoder().encode(fields), as: UTF8.self)
+        XCTAssertEqual(body, #"{"employer":null}"#)
+    }
+
+    func testCountriesMustBeAssignedCodes() throws {
+        let questionnaire = Questionnaire(questions: [Question(try question("country"))])
+        XCTAssertNil(questionnaire.errors(["country": .string("DE")])["country"])
+        XCTAssertEqual(questionnaire.errors(["country": .string("ZZ")])["country"], Key.questionsChooseCountry)
+    }
 }
 
 extension Question {

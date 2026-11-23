@@ -13,20 +13,24 @@ final class QuestionsModel: ObservableObject {
     var help = HelpContact()
     private let client: VerificationSession
     private let onDone: () -> Void
+    private let onHandBack: () -> Void
     private var submitKey = UUID()
 
-    init(client: VerificationSession, questionnaire: Questionnaire, verifier: String, onDone: @escaping () -> Void) {
-        self.client = client; self.questionnaire = questionnaire; self.verifier = verifier; self.onDone = onDone
+    init(client: VerificationSession, questionnaire: Questionnaire, verifier: String, onHandBack: @escaping () -> Void = {}, onDone: @escaping () -> Void) {
+        self.client = client; self.questionnaire = questionnaire; self.verifier = verifier; self.onDone = onDone; self.onHandBack = onHandBack
         answers = questionnaire.startingAnswers
     }
 
     var visible: [Question] { questionnaire.visibleQuestions(answers) }
 
     func set(_ key: String, _ value: JSONValue) {
+        guard stage == .form else { return }
         answers[key] = value; errors[key] = nil; submitKey = UUID()
+        if questionnaire.unsupportedQuestionShown(answers) { onHandBack() }
     }
 
     func send() async {
+        guard stage == .form else { return }
         errors = questionnaire.errors(answers)
         guard errors.isEmpty else { return }
         problem = nil; stage = .sending
@@ -34,7 +38,8 @@ final class QuestionsModel: ObservableObject {
             _ = try await client.submitAnswers(questionnaire.fields(answers), key: submitKey)
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
+            if case .api(409, _, _) = error { onDone() }
+            else if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
             else { problem = CredflareCopy.text(CredflareSpec.CopyKey.errorsSendAnswersFailed); stage = .form }
         } catch {
             problem = CredflareCopy.text(CredflareSpec.CopyKey.errorsSendAnswersFailed); stage = .form

@@ -36,7 +36,7 @@ struct QuestionsView: View {
     }
 
     private func string(_ key: String) -> Binding<String> {
-        Binding(get: { model.answers[key]?.stringValue ?? "" }, set: { model.set(key, .string($0)) })
+        Binding(get: { Questionnaire.displayText(model.answers[key]) }, set: { model.set(key, .string($0)) })
     }
 
     @ViewBuilder private func field(_ question: Question, theme: CredflareTheme) -> some View {

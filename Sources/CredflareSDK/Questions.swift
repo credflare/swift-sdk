@@ -27,17 +27,29 @@ public struct Question: Identifiable, Sendable {
 public struct Questionnaire: Sendable {
     public let questions: [Question]
     public let earlierAnswers: [String: JSONValue]
+    var numberTexts: [String: String] = [:]
     public init(questions: [Question], earlierAnswers: [String: JSONValue] = [:]) { self.questions = questions; self.earlierAnswers = earlierAnswers }
-    init?(_ schema: JSONValue?, earlierAnswers: [String: JSONValue] = [:]) {
+    init?(_ schema: JSONValue?, earlierAnswers: [String: JSONValue] = [:], numberTexts: [String: String] = [:]) {
         guard let list = schema?.arrayValue, !list.isEmpty else { return nil }
         self.init(questions: list.map(Question.init), earlierAnswers: earlierAnswers)
+        self.numberTexts = numberTexts
     }
 
     public var startingAnswers: [String: JSONValue] {
-        earlierAnswers.filter { key, _ in questions.contains { $0.key == key } }
+        var answers: [String: JSONValue] = [:]
+        for question in questions {
+            guard let answer = earlierAnswers[question.key] else { continue }
+            if case .number = answer, let text = numberTexts[question.key] { answers[question.key] = .string(text) }
+            else { answers[question.key] = answer }
+        }
+        return answers
     }
 
-    public var isSupported: Bool { visibleQuestions(startingAnswers).allSatisfy(\.isSupported) }
+    public func unsupportedQuestionShown(_ answers: [String: JSONValue]) -> Bool {
+        visibleQuestions(answers).contains { !$0.isSupported }
+    }
+
+    public var isSupported: Bool { !unsupportedQuestionShown(startingAnswers) }
 
     public func visibleQuestions(_ answers: [String: JSONValue]) -> [Question] {
         var context = earlierAnswers.filter { key, _ in !questions.contains { $0.key == key } }
@@ -61,6 +73,7 @@ public struct Questionnaire: Sendable {
         var fields: [String: JSONValue] = [:]
         for question in visibleQuestions(answers) {
             if let answer = answers[question.key].flatMap({ Self.submitted(question, $0) }) { fields[question.key] = answer }
+            else if earlierAnswers[question.key] != nil { fields[question.key] = .null }
         }
         return fields
     }
@@ -112,6 +125,18 @@ public struct Questionnaire: Sendable {
         return back.year == parts[0] && back.month == parts[1] && back.day == parts[2]
     }
 
+    static let countryCodes: Set<String> = Set(Locale.Region.isoRegions.map(\.identifier).filter { matches(CredflareSpec.Requirements.questionsCountryPattern, $0) })
+
+    static func isCountry(_ value: String) -> Bool { countryCodes.contains(value) }
+
+    public static func displayText(_ answer: JSONValue?) -> String {
+        switch answer {
+        case .string(let text)?: return text
+        case .number(let value)?: return Conditions.text(.number(value))
+        default: return ""
+        }
+    }
+
     static func number(_ answer: JSONValue) -> Decimal? {
         switch answer {
         case .number(let value): return value.isFinite ? Decimal(value) : nil
@@ -149,7 +174,7 @@ public struct Questionnaire: Sendable {
             guard let list = answer.arrayValue else { return Key.questionsRequired }
             let picked = list.compactMap(\.stringValue)
             return picked.count == list.count && Set(picked).count == picked.count && picked.allSatisfy(question.options.contains) ? nil : Key.questionsRequired
-        case "country": return text.map { matches(CredflareSpec.Requirements.questionsCountryPattern, $0) } == true ? nil : Key.questionsChooseCountry
+        case "country": return text.map(isCountry) == true ? nil : Key.questionsChooseCountry
         case "founders":
             guard case .object = answer, answer["includes_applicant"].map({ $0.boolValue != nil }) ?? true,
                   answer["names"].map({ $0.arrayValue?.allSatisfy { $0.stringValue != nil } == true }) ?? true else { return Key.questionsRequired }

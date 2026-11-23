@@ -22,6 +22,7 @@ private final class VerificationModel: ObservableObject {
     @Published var error: String?
     @Published var pendingRefresh = false
     @Published var closed = false
+    @Published var handedBack = false
     @Published var editing = false
     @Published var received: [String] = []
     @Published var liveness: LivenessModel?
@@ -48,6 +49,7 @@ private final class VerificationModel: ObservableObject {
         guard let info else { return .intro }
         if document != nil { return .capture }
         if closed { return .receipt(hostSteps: false) }
+        if handedBack { return .receipt(hostSteps: true) }
         switch info.nextStep {
         case .documents: return .documents
         case .questions: return .questions
@@ -93,7 +95,9 @@ private final class VerificationModel: ObservableObject {
         case .questions(let questionnaire):
             guard questions == nil else { return }
             clearSteps()
-            questions = QuestionsModel(client: client, questionnaire: questionnaire, verifier: verifier) { [weak self] in
+            questions = QuestionsModel(client: client, questionnaire: questionnaire, verifier: verifier, onHandBack: { [weak self] in
+                self?.handedBack = true; self?.clearSteps()
+            }) { [weak self] in
                 Task { @MainActor in await self?.finished(receipt: Key.receiptAnswers) }
             }
         case .check(let next):

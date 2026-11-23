@@ -45,7 +45,8 @@ final class LocationModel: ObservableObject {
             _ = try await client.submitLocation(fix.submission(), key: submitKey)
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help, reference: settings.reference)) }
+            if case .api(409, _, _) = error { onDone() }
+            else if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help, reference: settings.reference)) }
             else { stage = .failed(text(CredflareSpec.CopyKey.errorsSendLocationFailed), retry: true) }
         } catch {
             stage = .failed(text(CredflareSpec.CopyKey.errorsSendLocationFailed), retry: true)

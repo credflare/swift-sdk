@@ -78,12 +78,31 @@ public struct SessionInfo: Decodable {
         public let verificationRequirements: [JSONValue]
         public let formAnswers: JSONValue?
         enum CodingKeys: String, CodingKey { case documentRequirements = "document_requirements", formSchema = "form_schema", verificationRequirements = "verification_requirements", formAnswers = "form_answers" }
+        let earlierNumberTexts: [String: String]
+        public init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            documentRequirements = try values.decode([DocumentRequirement].self, forKey: .documentRequirements)
+            formSchema = try values.decodeIfPresent(JSONValue.self, forKey: .formSchema)
+            verificationRequirements = try values.decode([JSONValue].self, forKey: .verificationRequirements)
+            formAnswers = try values.decodeIfPresent(JSONValue.self, forKey: .formAnswers)
+            earlierNumberTexts = ((try? values.decodeIfPresent([String: NumberText].self, forKey: .formAnswers)) ?? [:]).compactMapValues(\.text)
+        }
         public var earlierAnswers: [String: JSONValue] { if case .object(let answers)? = formAnswers { return answers }; return [:] }
         public var requirements: [VerificationRequirement] { verificationRequirements.map(VerificationRequirement.init) }
         public var requiresSelfie: Bool { requirements.contains { $0.facial != nil } }
         public var requiresLocation: Bool { requirements.contains { $0.location != nil } }
-        public var questionnaire: Questionnaire? { Questionnaire(formSchema, earlierAnswers: earlierAnswers) }
+        public var questionnaire: Questionnaire? { Questionnaire(formSchema, earlierAnswers: earlierAnswers, numberTexts: earlierNumberTexts) }
         public var needsHostSteps: Bool { !(questionnaire?.isSupported ?? true) || requirements.contains { !$0.isHandledInSDK } }
+    }
+}
+
+struct NumberText: Decodable {
+    let text: String?
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer()
+        if (try? value.decode(Bool.self)) != nil { text = nil }
+        else if let number = try? value.decode(Decimal.self) { text = number.description }
+        else { text = nil }
     }
 }
 

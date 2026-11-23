@@ -200,10 +200,10 @@ extension ClientTests {
         XCTAssertNil(fields["income"])
     }
 
-    func testNumberAnswersAreSentAsNumbers() {
+    func testTypedNumbersAreSentAsTheirValidatedText() {
         let questionnaire = Questionnaire(questions: [Question(.object(["key": .string("income"), "label": .string("Income"), "type": .string("number"), "required": .bool(true)]))])
-        XCTAssertEqual(Conditions.text(questionnaire.fields(["income": .string(" 4500.5 ")])["income"] ?? .null), "4500.5")
-        if case .number(let value)? = questionnaire.fields(["income": .string("4500")])["income"] { XCTAssertEqual(value, 4500) } else { XCTFail("Expected a number") }
+        XCTAssertEqual(questionnaire.fields(["income": .string(" 4500.5 ")])["income"]?.stringValue, "4500.5")
+        XCTAssertEqual(questionnaire.fields(["income": .string("4500")])["income"]?.stringValue, "4500")
         XCTAssertEqual(questionnaire.errors(["income": .string("4,500")])["income"], CredflareSpec.CopyKey.questionsInvalidNumber)
     }
 

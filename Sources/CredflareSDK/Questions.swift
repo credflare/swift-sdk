@@ -32,14 +32,14 @@ public struct Questionnaire: Sendable {
         questions = list.map(Question.init)
     }
 
-    public var isSupported: Bool { questions.allSatisfy(\.isSupported) }
+    public var isSupported: Bool { visibleQuestions([:]).allSatisfy(\.isSupported) }
 
     public func visibleQuestions(_ answers: [String: JSONValue]) -> [Question] {
         var context: [String: JSONValue] = [:]
         var shown: [Question] = []
         for question in questions where Conditions.visible(question.showIf, form: .object(context)) {
             shown.append(question)
-            if let answer = answers[question.key] { context[question.key] = answer }
+            if let answer = answers[question.key].flatMap({ Self.submitted(question, $0) }) { context[question.key] = answer }
         }
         return shown
     }
@@ -55,10 +55,29 @@ public struct Questionnaire: Sendable {
     public func fields(_ answers: [String: JSONValue]) -> [String: JSONValue] {
         var fields: [String: JSONValue] = [:]
         for question in visibleQuestions(answers) {
-            guard let answer = answers[question.key], !Self.isEmpty(answer) else { continue }
-            fields[question.key] = Self.normalized(question, answer)
+            if let answer = answers[question.key].flatMap({ Self.submitted(question, $0) }) { fields[question.key] = answer }
         }
         return fields
+    }
+
+    static func submitted(_ question: Question, _ answer: JSONValue) -> JSONValue? {
+        guard !isEmpty(question, answer) else { return nil }
+        if question.type == "founders", case .object(let value) = answer {
+            return .object(["includes_applicant": .bool(value["includes_applicant"]?.boolValue ?? false), "names": .array(founderNames(answer).map(JSONValue.string))])
+        }
+        if case .string(let text) = answer { return .string(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        return answer
+    }
+
+    static func founderNames(_ answer: JSONValue) -> [String] {
+        (answer["names"]?.arrayValue ?? []).compactMap { $0.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+
+    static func isEmpty(_ question: Question, _ answer: JSONValue) -> Bool {
+        if question.type == "founders", case .object = answer {
+            return answer["includes_applicant"]?.boolValue != true && founderNames(answer).isEmpty
+        }
+        return isEmpty(answer)
     }
 
     static func isEmpty(_ answer: JSONValue) -> Bool {
@@ -70,14 +89,6 @@ public struct Questionnaire: Sendable {
         }
     }
 
-    static func normalized(_ question: Question, _ answer: JSONValue) -> JSONValue {
-        switch (question.type, answer) {
-        case ("number", .string(let text)): return Double(text.trimmingCharacters(in: .whitespaces)).map(JSONValue.number) ?? answer
-        case (_, .string(let text)): return .string(text.trimmingCharacters(in: .whitespacesAndNewlines))
-        default: return answer
-        }
-    }
-
     private static func matches(_ pattern: String, _ text: String) -> Bool { text.range(of: pattern, options: .regularExpression) != nil }
 
     static func isEmail(_ value: String) -> Bool {
@@ -85,8 +96,9 @@ public struct Questionnaire: Sendable {
     }
 
     static func isDate(_ value: String) -> Bool {
-        guard matches(CredflareSpec.Requirements.questionsDatePattern, value) else { return false }
+        guard matches(CredflareSpec.Requirements.questionsDatePattern, value), value.allSatisfy({ $0.isASCII }) else { return false }
         let parts = value.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return false }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
         let components = DateComponents(year: parts[0], month: parts[1], day: parts[2])
@@ -95,33 +107,48 @@ public struct Questionnaire: Sendable {
         return back.year == parts[0] && back.month == parts[1] && back.day == parts[2]
     }
 
+    static func number(_ answer: JSONValue) -> Decimal? {
+        switch answer {
+        case .number(let value): return value.isFinite ? Decimal(value) : nil
+        case .string(let text):
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard matches(CredflareSpec.Requirements.questionsNumberPattern, trimmed), trimmed.allSatisfy({ $0.isASCII }) else { return nil }
+            return Decimal(string: trimmed, locale: Locale(identifier: "en_US_POSIX"))
+        default: return nil
+        }
+    }
+
     static func problem(_ question: Question, _ answer: JSONValue) -> String? {
         typealias Key = CredflareSpec.CopyKey
         if question.type == "consent" {
-            return question.required && answer.boolValue != true ? Key.questionsConsentRequired : nil
+            if case .null = answer { return question.required ? Key.questionsConsentRequired : nil }
+            guard let value = answer.boolValue else { return Key.questionsConsentRequired }
+            return question.required && !value ? Key.questionsConsentRequired : nil
         }
-        if isEmpty(answer) { return question.required ? Key.questionsRequired : nil }
+        if isEmpty(question, answer) { return question.required ? Key.questionsRequired : nil }
         let text = answer.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines)
         switch question.type {
         case "text", "textarea":
-            return (text?.count ?? 0) > CredflareSpec.Requirements.questionsTextMaxLength ? Key.questionsTextTooLong : nil
+            guard let text else { return Key.questionsRequired }
+            return text.count > CredflareSpec.Requirements.questionsTextMaxLength ? Key.questionsTextTooLong : nil
         case "number":
-            let value: Double?
-            if let number = answer.doubleValue { value = number }
-            else if let text, matches(CredflareSpec.Requirements.questionsNumberPattern, text) { value = Double(text) }
-            else { value = nil }
-            guard let value else { return Key.questionsInvalidNumber }
-            if let min = question.min, value < min { return Key.questionsNumberMin }
-            if let max = question.max, value > max { return Key.questionsNumberMax }
+            guard let value = number(answer) else { return Key.questionsInvalidNumber }
+            if let min = question.min, value < Decimal(min) { return Key.questionsNumberMin }
+            if let max = question.max, value > Decimal(max) { return Key.questionsNumberMax }
             return nil
         case "date": return text.map(isDate) == true ? nil : Key.questionsInvalidDate
         case "email": return text.map(isEmail) == true ? nil : Key.questionsInvalidEmail
         case "phone", "tel": return text.map { matches(CredflareSpec.Requirements.questionsPhonePattern, $0) } == true ? nil : Key.questionsInvalidPhone
         case "select", "single_select": return text.map(question.options.contains) == true ? nil : Key.questionsChooseOne
         case "multi_select":
-            let picked = answer.arrayValue?.compactMap(\.stringValue) ?? []
-            return Set(picked).count == picked.count && picked.allSatisfy(question.options.contains) ? nil : Key.questionsRequired
+            guard let list = answer.arrayValue else { return Key.questionsRequired }
+            let picked = list.compactMap(\.stringValue)
+            return picked.count == list.count && Set(picked).count == picked.count && picked.allSatisfy(question.options.contains) ? nil : Key.questionsRequired
         case "country": return text.map { matches(CredflareSpec.Requirements.questionsCountryPattern, $0) } == true ? nil : Key.questionsChooseCountry
+        case "founders":
+            guard case .object = answer, answer["includes_applicant"].map({ $0.boolValue != nil }) ?? true,
+                  answer["names"].map({ $0.arrayValue?.allSatisfy { $0.stringValue != nil } == true }) ?? true else { return Key.questionsRequired }
+            return nil
         default: return nil
         }
     }

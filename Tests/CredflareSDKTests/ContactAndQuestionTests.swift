@@ -249,6 +249,44 @@ extension ClientTests {
         XCTAssertEqual(questionnaire.profile?.nextStepsCopyKey, CredflareSpec.CopyKey.documentsHostStepsNext)
     }
 
+    @MainActor
+    func testResendTooSoonWithoutALocalCodeOpensCodeEntryForTheTypedDestination() async throws {
+        let raw = try JSONSerialization.jsonObject(with: fixture("rejections/email.resend_too_soon")) as! [String: Any]
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("reject:email.resend_too_soon")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        model.destination = "jane@example.test"
+        await model.send()
+        guard case .rejected(let rejection) = model.stage else { return XCTFail("Expected the wait screen") }
+        XCTAssertEqual(rejection.action, .wait)
+        await model.perform(rejection)
+        XCTAssertEqual(model.stage, .code)
+        XCTAssertNil(model.sent)
+        XCTAssertEqual(model.destination, "jane@example.test")
+        let deadline = try XCTUnwrap(ISO8601.parse(raw["resend_available_at"] as! String))
+        XCTAssertEqual(model.resendAt, deadline)
+        XCTAssertEqual(model.secondsUntilResend(now: deadline.addingTimeInterval(-30)), 30)
+        XCTAssertTrue(model.canResend)
+    }
+
+    @MainActor
+    func testResendIsOffWhenNoSendsRemain() async throws {
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: fixture("email-code-request")) as? [String: Any])
+        var data = try XCTUnwrap(payload["data"] as? [String: Any])
+        data["sends_remaining"] = 0
+        payload["data"] = data
+        struct Payload: Decodable { let data: ContactCodeSent }
+        let sent = try JSONDecoder().decode(Payload.self, from: JSONSerialization.data(withJSONObject: payload)).data
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("no-sends-left")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        model.destination = "jane@example.test"
+        model.sent = sent; model.stage = .code
+        XCTAssertFalse(model.canResend)
+        await model.send()
+        XCTAssertEqual(model.stage, .code)
+        let sends = try await requests("/email-codes")
+        XCTAssertTrue(sends.isEmpty)
+        model.changeDestination()
+        XCTAssertTrue(model.canResend)
+    }
+
     @available(*, deprecated)
     func testEarlierPublicAPIStillCompiles() async throws {
         do { _ = try await VerificationSession(try descriptor("reject:phone.send_limit")).requestCode(.phone, to: "+237650000001"); XCTFail("Expected rejection") }

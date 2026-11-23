@@ -220,8 +220,9 @@ public enum Conditions {
     private static func fuzzy(_ actual: JSONValue, _ expected: JSONValue) -> Bool {
         guard isScalar(actual), case .object = expected, let target = expected["text"], isScalar(target) else { return false }
         func normalize(_ value: JSONValue) -> String {
-            text(value).lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            text(value).lowercased()
+                .replacingOccurrences(of: "^[\(jsSpace)]+|[\(jsSpace)]+$", with: "", options: .regularExpression)
+                .replacingOccurrences(of: "[\(jsSpace)]+", with: " ", options: .regularExpression)
                 .unicodeScalars.prefix(fuzzyLength).reduce(into: "") { $0.unicodeScalars.append($1) }
         }
         let score = expected["min_score"] ?? .null
@@ -263,10 +264,15 @@ public enum Conditions {
         return best + common(x[0..<p1], y[0..<p2]) + common(x[(p1 + best)...], y[(p2 + best)...])
     }
 
+    static let jsSpace = #"\t\n\x{0B}\f\r \x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}"#
+
     static func asciiClasses(_ pattern: String) -> String {
         let word = "A-Za-z0-9_"
-        var output = "", inClass = false, escaped = false
-        for character in pattern {
+        let characters = Array(pattern)
+        var output = "", inClass = false, escaped = false, index = 0
+        while index < characters.count {
+            let character = characters[index]
+            index += 1
             if escaped {
                 escaped = false
                 switch (character, inClass) {
@@ -274,12 +280,18 @@ public enum Conditions {
                 case ("D", false): output += "[^0-9]"
                 case ("w", false): output += "[\(word)]"
                 case ("W", false): output += "[^\(word)]"
+                case ("s", false): output += "[\(jsSpace)]"
+                case ("S", false): output += "[^\(jsSpace)]"
                 case ("d", true): output += "0-9"
                 case ("w", true): output += word
+                case ("s", true): output += jsSpace
                 case ("D", true): output += "[^0-9]"
                 case ("W", true): output += "[^\(word)]"
+                case ("S", true): output += "[^\(jsSpace)]"
                 case ("b", false): output += "(?:(?<=[\(word)])(?![\(word)])|(?<![\(word)])(?=[\(word)]))"
                 case ("B", false): output += "(?:(?<=[\(word)])(?=[\(word)])|(?<![\(word)])(?![\(word)]))"
+                case ("u", _) where index < characters.count && characters[index] == "{":
+                    output += "\\x"
                 default: output += "\\" + String(character)
                 }
                 continue

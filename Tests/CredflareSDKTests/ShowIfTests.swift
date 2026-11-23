@@ -47,6 +47,19 @@ final class ShowIfTests: XCTestCase {
             ("fuzzy_match", "composed", .object(["text": .string("cafe\u{0301}"), "min_score": .number(100)]), "caf\u{00E9}", false),
             ("equals", "trailing dot", .number(5), "5.", true),
             ("equals", "leading dot", .number(0.5), ".5", true),
+            ("regex", "code point escape", .string("^\\u{1F600}$"), "\u{1F600}", true),
+            ("regex", "code point escape other", .string("^\\u{1F600}$"), "x", false),
+            ("regex", "code point range", .string("^[\\u{1F600}-\\u{1F64F}]$"), "\u{1F603}", true),
+            ("regex", "short code point", .string("^\\u{e9}$"), "\u{E9}", true),
+            ("regex", "four digit escape", .string("^\\u00e9$"), "\u{E9}", true),
+            ("regex", "code point out of range", .string("^\\u{110000}$"), "x", false),
+            ("regex", "escaped backslash before u", .string("^\\\\u{41}$"), "\\u{41}", false),
+            ("regex", "code point then quantifier", .string("^\\u{41}{2}$"), "AA", true),
+            ("regex", "byte order mark is space", .string("^\\s$"), "\u{FEFF}", true),
+            ("regex", "byte order mark is not non-space", .string("^\\S$"), "\u{FEFF}", false),
+            ("regex", "byte order mark in class", .string("^[\\s]$"), "\u{FEFF}", true),
+            ("fuzzy_match", "byte order mark inside", .object(["text": .string("a b"), "min_score": .number(100)]), "a\u{FEFF}b", true),
+            ("fuzzy_match", "byte order mark around", .object(["text": .string("ab"), "min_score": .number(100)]), "\u{FEFF}ab\u{FEFF}", true),
         ]
         for (op, name, value, answer, expected) in cases {
             let condition = ShowIfCondition(.object(["path": .string("form.a"), "op": .string(op), "value": value]))

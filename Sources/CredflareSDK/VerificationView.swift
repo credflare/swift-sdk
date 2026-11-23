@@ -570,7 +570,7 @@ extension CredflareVerificationView {
 extension VerificationModel {
     static func previewSession(documents: Bool, requirements: [String], form: Bool, questions: Bool = false) -> SessionInfo {
         let document = #"{"document_type":{"id":1,"name":"Demo identity document","two_sided":true,"capture_method":"camera"},"capture_method":"snapshot_or_upload","group_key":null,"rule":"all_of","min_required":null,"remaining_required":1,"requested_sides":["front","back"]}"#
-        let facial = #"{"verification_type":"facial_verification","settings":{"gestures":["blink","smile","turn_left","turn_right","nod"],"gesture_count":3,"record_video":true,"video_retention_days":30}}"#
+        let facial = #"{"verification_type":"facial_verification","settings":{"gestures":["blink","smile","turn_left","turn_right","nod"],"gesture_count":3,"record_video":true,"video_retention_days":null}}"#
         let location = #"{"verification_type":"location_verification","settings":{"max_accuracy_m":50,"max_age_s":60,"mock_location":"reject","ip_country":"flag","reference":{"rule":"within","places":[{"label":"Head office"}]}}}"#
         let contact = { (type: String) in #"{"verification_type":"\#(type)_verification","settings":null}"# }
         let verification = requirements.map { $0 == "facial" ? facial : $0 == "location" ? location : contact($0) }.joined(separator: ",")

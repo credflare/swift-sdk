@@ -86,6 +86,7 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual(facial.gestures, ["blink", "smile", "turn_left", "turn_right", "nod"])
         XCTAssertEqual(facial.gestureCount, 3)
         XCTAssertTrue(facial.recordVideo)
+        XCTAssertEqual(facial.videoRetentionDays, 30)
         let location = try XCTUnwrap(requirements[1].location)
         XCTAssertEqual(location.maxAccuracyM, 50)
         XCTAssertEqual(location.maxAgeS, 60)
@@ -101,7 +102,16 @@ final class ClientTests: XCTestCase {
         let facial = try XCTUnwrap(info.profile?.requirements.first?.facial)
         XCTAssertEqual(facial.gestures, CredflareSpec.Settings.facialVerificationGesturesDefault)
         XCTAssertEqual(facial.gestureCount, CredflareSpec.Settings.facialVerificationGestureCountDefault)
+        XCTAssertNil(facial.videoRetentionDays)
         XCTAssertFalse(info.profile!.needsHostSteps)
+    }
+    func testVideoRetentionDaysPassThroughOrStayNil() throws {
+        func days(_ json: String) throws -> Int? {
+            FacialSettings(try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8))).videoRetentionDays
+        }
+        XCTAssertEqual(try days(#"{"video_retention_days":90}"#), 90)
+        XCTAssertNil(try days(#"{"video_retention_days":null}"#))
+        XCTAssertNil(try days("{}"))
     }
     func testLivenessChallengeUploadsAndFacialSubmissionOverHTTP() async throws {
         let client = VerificationSession(try descriptor("capture"))

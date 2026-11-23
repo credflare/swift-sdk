@@ -103,6 +103,10 @@ final class ClientTests: XCTestCase {
         XCTAssertEqual(facial.gestureCount, CredflareSpec.Settings.facialVerificationGestureCountDefault)
         XCTAssertFalse(info.profile!.needsHostSteps)
     }
+    func testUnknownSettingsKeysAreIgnored() throws {
+        let settings = try JSONDecoder().decode(JSONValue.self, from: Data(#"{"gesture_count":2,"video_retention_days":30}"#.utf8))
+        XCTAssertEqual(FacialSettings(settings).gestureCount, 2)
+    }
     func testLivenessChallengeUploadsAndFacialSubmissionOverHTTP() async throws {
         let client = VerificationSession(try descriptor("capture"))
         let challenge = try await client.createLivenessChallenge()

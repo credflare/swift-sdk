@@ -2,14 +2,16 @@
     "success": true,
     "message": "Operation successful",
     "data": {
-        "session_id": "01a1fb8d-6bf6-7097-b520-929ef14e00f5",
-        "expires_at": "2026-11-21T01:11:51.000000Z",
+        "session_id": "01a20a4e-e024-719e-be15-86b57df51ddb",
+        "expires_at": "2026-11-23T21:57:51.000000Z",
         "status": "pending",
         "environment": "live",
         "custom_message": null,
         "requester": {
-            "name": "Mrs. Jakayla Kris's Workspace",
-            "logo_url": null
+            "name": "Pauline Sipes's Workspace",
+            "logo_url": null,
+            "help_email": null,
+            "help_url": null
         },
         "brand": null,
         "upload_limits": {
@@ -25,6 +27,7 @@
         "profile": {
             "name": "Liveness and location",
             "form_schema": null,
+            "form_answers": {},
             "verification_requirements": [
                 {
                     "verification_type": "facial_verification",
@@ -37,8 +40,7 @@
                             "nod"
                         ],
                         "gesture_count": 3,
-                        "record_video": true,
-                        "video_retention_days": 30
+                        "record_video": true
                     }
                 },
                 {

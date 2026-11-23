@@ -73,11 +73,41 @@ struct QuestionsView: View {
                     .toggleStyle(CheckboxStyle())
                 }
             }
+        case "founders":
+            founders(question, theme: theme)
         case "consent":
             Toggle(question.label, isOn: Binding(get: { model.answers[question.key]?.boolValue ?? false }, set: { model.set(question.key, .bool($0)) }))
                 .toggleStyle(CheckboxStyle())
         default:
             InputField(placeholder: "", text: string(question.key), invalid: invalid)
+        }
+    }
+
+    private func founders(_ question: Question, theme: CredflareTheme) -> some View {
+        let answer = model.answers[question.key]
+        let names = answer?["names"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        let includesMe = answer?["includes_applicant"]?.boolValue ?? false
+        func update(_ names: [String], _ includesMe: Bool) {
+            model.set(question.key, .object(["includes_applicant": .bool(includesMe), "names": .array(names.map(JSONValue.string))]))
+        }
+        return VStack(spacing: CGFloat(CredflareSpec.Tokens.spacingXs)) {
+            Toggle(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersIncludesMe), isOn: Binding(get: { includesMe }, set: { update(names, $0) }))
+                .toggleStyle(CheckboxStyle())
+            ForEach(names.indices, id: \.self) { index in
+                HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) {
+                    InputField(placeholder: CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersName), text: Binding(
+                        get: { index < names.count ? names[index] : "" },
+                        set: { value in var next = names; if index < next.count { next[index] = value }; update(next, includesMe) }
+                    ), content: .name, invalid: model.errors[question.key] != nil)
+                    .accessibilityLabel(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersName))
+                    Button(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersRemove)) {
+                        var next = names; if index < next.count { next.remove(at: index) }; update(next, includesMe)
+                    }
+                    .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary)
+                    .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeLinkHeight))
+                }
+            }
+            SecondaryButton(CredflareCopy.text(CredflareSpec.CopyKey.questionsFoundersAdd)) { update(names + [""], includesMe) }
         }
     }
 

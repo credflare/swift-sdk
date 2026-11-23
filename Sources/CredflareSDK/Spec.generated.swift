@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.1.0 (6824e65d1864). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.1.0 (1489c6c1b827). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -68,7 +68,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.1.0"
-    public static let hash = "6824e65d1864"
+    public static let hash = "1489c6c1b827"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -613,6 +613,10 @@ public enum CredflareSpec {
             "questions.invalid_email": "Enter a valid email address.",
             "questions.invalid_phone": "Enter a valid phone number.",
             "questions.text_too_long": "Use at most 5000 characters.",
+            "questions.founders_name": "Founder name",
+            "questions.founders_add": "Add a founder",
+            "questions.founders_remove": "Remove",
+            "questions.founders_includes_me": "I am one of the founders",
             "handoff.action": "Continue on your phone",
             "handoff.title": "Continue on your phone",
             "handoff.body": "Scan this code with your phone camera to carry on there. The code works once and expires in {minutes} minutes.",
@@ -895,6 +899,10 @@ public enum CredflareSpec {
         public static let questionsInvalidEmail: String = "questions.invalid_email"
         public static let questionsInvalidPhone: String = "questions.invalid_phone"
         public static let questionsTextTooLong: String = "questions.text_too_long"
+        public static let questionsFoundersName: String = "questions.founders_name"
+        public static let questionsFoundersAdd: String = "questions.founders_add"
+        public static let questionsFoundersRemove: String = "questions.founders_remove"
+        public static let questionsFoundersIncludesMe: String = "questions.founders_includes_me"
         public static let handoffAction: String = "handoff.action"
         public static let handoffTitle: String = "handoff.title"
         public static let handoffBody: String = "handoff.body"
@@ -1311,6 +1319,7 @@ public enum CredflareSpec {
         public static let showIfDefaultMatch: String = "all"
         public static let showIfMaxConditions: Int = 10
         public static let showIfPathPrefix: String = "form."
+        public static let showIfEarlierAnswers: String = "profile.form_answers"
         public static let showIfOperators: [String] = [
             "equals",
             "not_equals",

@@ -20,7 +20,7 @@ public struct Question: Identifiable, Sendable {
         max = raw["max"]?.doubleValue
         showIf = ShowIf(raw["show_if"])
     }
-    public var isSupported: Bool { CredflareSpec.Requirements.questionsTypes.contains(type) && type != "founders" }
+    public var isSupported: Bool { CredflareSpec.Requirements.questionsTypes.contains(type) }
     public var isChoice: Bool { CredflareSpec.Requirements.questionsChoiceTypes.contains(type) }
 }
 

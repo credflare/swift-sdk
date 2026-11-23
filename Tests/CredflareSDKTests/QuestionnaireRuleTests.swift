@@ -64,6 +64,24 @@ final class QuestionnaireRuleTests: XCTestCase {
         XCTAssertEqual(employer.errors(["employer": .bool(true)])["employer"], Key.questionsRequired)
     }
 
+    func testFoundersAreAskedAndSentInTheContractShape() throws {
+        let founders = Question(try question("employer", as: "founders"))
+        XCTAssertTrue(founders.isSupported)
+        let questionnaire = Questionnaire(questions: [Question(try question("employment")), founders])
+        XCTAssertEqual(questionnaire.errors(["employment": .string("Employed")])["employer"], Key.questionsRequired)
+        let empty: JSONValue = .object(["includes_applicant": .bool(false), "names": .array([.string("  ")])])
+        XCTAssertEqual(questionnaire.errors(["employment": .string("Employed"), "employer": empty])["employer"], Key.questionsRequired)
+        let answer: JSONValue = .object(["includes_applicant": .bool(true), "names": .array([.string(" Ada Obi "), .string("")])])
+        let answers: [String: JSONValue] = ["employment": .string("Employed"), "employer": answer]
+        XCTAssertEqual(questionnaire.errors(answers), [:])
+        let sent = try XCTUnwrap(questionnaire.fields(answers)["employer"])
+        XCTAssertEqual(sent["includes_applicant"]?.boolValue, true)
+        XCTAssertEqual(sent["names"]?.arrayValue?.compactMap(\.stringValue), ["Ada Obi"])
+        let onlyMe: JSONValue = .object(["includes_applicant": .bool(true), "names": .array([])])
+        XCTAssertEqual(questionnaire.fields(["employment": .string("Employed"), "employer": onlyMe])["employer"]?["names"]?.arrayValue?.count, 0)
+        XCTAssertEqual(questionnaire.errors(["employment": .string("Employed"), "employer": .string("Ada")])["employer"], Key.questionsRequired)
+    }
+
     func testOnlyVisibleUnsupportedQuestionsSendTheFormToTheHost() throws {
         let hiddenUnknown = Question(try question("employer", as: "signature"))
         let questionnaire = Questionnaire(questions: [Question(try question("employment")), hiddenUnknown])

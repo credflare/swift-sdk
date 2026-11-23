@@ -10,6 +10,8 @@ final class ContactCodeModel: ObservableObject {
     @Published var problem: String?
     @Published var sent: ContactCodeSent? { didSet { resendAt = sent?.resendDate } }
     @Published var resendAt: Date?
+    @Published var changeAfter = false
+    private(set) var sentTo: String?
     let channel: ContactChannel
     let verifier: String
     var help = HelpContact()
@@ -28,14 +30,17 @@ final class ContactCodeModel: ObservableObject {
     var titleKey: String { channel == .email ? CredflareSpec.CopyKey.emailTitle : CredflareSpec.CopyKey.phoneTitle }
 
     func send() async {
-        guard canResend else { return }
+        guard stage != .sending, stage != .confirming else { return }
         guard channel.isValid(destination) else {
             problem = text(channel == .email ? CredflareSpec.CopyKey.emailInvalid : CredflareSpec.CopyKey.phoneInvalid)
             return
         }
+        let back: Stage = stage == .destination || sent == nil ? .destination : .code
         problem = nil; stage = .sending
         do {
+            let target = channel.normalized(destination)
             sent = try await client.requestCode(channel, to: destination)
+            sentTo = target; changeAfter = false
             code = ""; stage = .code
         } catch let error as CredflareError {
             if case .api(422, _, _) = error {
@@ -43,20 +48,21 @@ final class ContactCodeModel: ObservableObject {
                 if let next = rejection.resendAvailableAt { resendAt = next }
                 stage = .rejected(rejection)
             }
-            else { problem = text(CredflareSpec.CopyKey.errorsSendCodeFailed); stage = sent == nil ? .destination : .code }
+            else { problem = text(CredflareSpec.CopyKey.errorsSendCodeFailed); stage = back }
         } catch {
-            problem = text(CredflareSpec.CopyKey.errorsSendCodeFailed); stage = sent == nil ? .destination : .code
+            problem = text(CredflareSpec.CopyKey.errorsSendCodeFailed); stage = back
         }
     }
 
     func confirm() async {
-        guard ContactChannel.isCode(code) else { return }
+        guard stage == .code, ContactChannel.isCode(code) else { return }
         problem = nil; stage = .confirming
         do {
             _ = try await client.confirmCode(channel, code: code)
             onDone()
         } catch let error as CredflareError {
-            if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
+            if case .api(409, _, _) = error { onDone() }
+            else if case .api(422, _, _) = error { stage = .rejected(Rejection(error, requester: verifier, contact: help)) }
             else { problem = text(CredflareSpec.CopyKey.errorsConfirmCodeFailed); stage = .code }
         } catch {
             problem = text(CredflareSpec.CopyKey.errorsConfirmCodeFailed); stage = .code
@@ -69,7 +75,9 @@ final class ContactCodeModel: ObservableObject {
         switch rejection.action {
         case .reenterCode: code = ""; stage = .code
         case .newCode: await send()
-        case .wait: code = ""; stage = .code
+        case .wait:
+            if let sentTo, sentTo != channel.normalized(destination) { destination = sentTo; changeAfter = true }
+            code = ""; stage = .code
         case .retry, .restart: code = ""; stage = sent == nil ? .destination : .code
         case .leave: break
         }
@@ -81,7 +89,9 @@ final class ContactCodeModel: ObservableObject {
         resendAt.map { max(0, Int($0.timeIntervalSince(now).rounded(.up))) } ?? 0
     }
 
-    func changeDestination() { sent = nil; code = ""; problem = nil; stage = .destination }
+    func changeDestination() { code = ""; problem = nil; changeAfter = false; stage = .destination }
+
+    func returnToCode() { problem = nil; stage = .code }
 
     func setCode(_ value: String) {
         code = String(value.filter { $0.isASCII && $0.isNumber }.prefix(CredflareSpec.Requirements.contactCodesCodeLength))

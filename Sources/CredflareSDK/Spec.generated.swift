@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.1.0 (1489c6c1b827). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.1.0 (eb176f038a44). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -68,7 +68,7 @@ public struct SpecIcon: Equatable, Sendable {
 
 public enum CredflareSpec {
     public static let version = "1.1.0"
-    public static let hash = "1489c6c1b827"
+    public static let hash = "eb176f038a44"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -580,6 +580,7 @@ public enum CredflareSpec {
             "email.send": "Send code",
             "email.invalid": "Enter a valid email address.",
             "email.change": "Use a different email address",
+            "email.change_after": "You can use a different email address when the countdown ends.",
             "phone.title": "Confirm your phone number",
             "phone.body": "{verifier} asks you to confirm a phone number. We will send a short code to it by text message.",
             "phone.label": "Phone number",
@@ -587,6 +588,7 @@ public enum CredflareSpec {
             "phone.send": "Send code",
             "phone.invalid": "Enter the number in international format, starting with + and the country code.",
             "phone.change": "Use a different phone number",
+            "phone.change_after": "You can use a different phone number when the countdown ends.",
             "contact_code.sending": "Sending a code…",
             "contact_code.title": "Enter the code",
             "contact_code.body": "We sent a code to {destination}. It expires in {minutes} minutes.",
@@ -866,6 +868,7 @@ public enum CredflareSpec {
         public static let emailSend: String = "email.send"
         public static let emailInvalid: String = "email.invalid"
         public static let emailChange: String = "email.change"
+        public static let emailChangeAfter: String = "email.change_after"
         public static let phoneTitle: String = "phone.title"
         public static let phoneBody: String = "phone.body"
         public static let phoneLabel: String = "phone.label"
@@ -873,6 +876,7 @@ public enum CredflareSpec {
         public static let phoneSend: String = "phone.send"
         public static let phoneInvalid: String = "phone.invalid"
         public static let phoneChange: String = "phone.change"
+        public static let phoneChangeAfter: String = "phone.change_after"
         public static let contactCodeSending: String = "contact_code.sending"
         public static let contactCodeTitle: String = "contact_code.title"
         public static let contactCodeBody: String = "contact_code.body"

@@ -267,24 +267,98 @@ extension ClientTests {
         XCTAssertTrue(model.canResend)
     }
 
-    @MainActor
-    func testResendIsOffWhenNoSendsRemain() async throws {
+    func sentWithNoSendsLeft() throws -> ContactCodeSent {
         var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: fixture("email-code-request")) as? [String: Any])
         var data = try XCTUnwrap(payload["data"] as? [String: Any])
         data["sends_remaining"] = 0
         payload["data"] = data
         struct Payload: Decodable { let data: ContactCodeSent }
-        let sent = try JSONDecoder().decode(Payload.self, from: JSONSerialization.data(withJSONObject: payload)).data
-        let model = ContactCodeModel(client: VerificationSession(try descriptor("no-sends-left")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        return try JSONDecoder().decode(Payload.self, from: JSONSerialization.data(withJSONObject: payload)).data
+    }
+
+    @MainActor
+    func testANewCodeAfterTheLastSendEndsWithTheSendLimitForTheHost() async throws {
+        var result: VerificationResult?
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("reject:email.send_limit")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { result = $0 })
         model.destination = "jane@example.test"
-        model.sent = sent; model.stage = .code
+        model.sent = try sentWithNoSendsLeft(); model.stage = .code
         XCTAssertFalse(model.canResend)
+        await model.perform(Rejection(.api(422, "", code: .emailCodeExpired), requester: nil))
+        guard case .rejected(let limit) = model.stage else { return XCTFail("Expected the send limit screen") }
+        XCTAssertEqual(limit.code, .emailSendLimit)
+        await model.perform(limit)
+        XCTAssertEqual(result, .hostActionRequired(code: .emailSendLimit))
+        model.changeDestination()
+        XCTAssertNotNil(model.sent)
+        XCTAssertFalse(model.canResend)
+    }
+
+    @MainActor
+    func testANewDestinationRefusedDuringCooldownKeepsTheEarlierCodeEntry() async throws {
+        let model = ContactCodeModel(client: VerificationSession(try descriptor("cooldown")), channel: .email, verifier: "Acme Bank", onDone: {}, onLeave: { _ in })
+        model.destination = "jane@example.test"
         await model.send()
         XCTAssertEqual(model.stage, .code)
-        let sends = try await requests("/email-codes")
-        XCTAssertTrue(sends.isEmpty)
         model.changeDestination()
-        XCTAssertTrue(model.canResend)
+        model.destination = "other@example.test"
+        await model.send()
+        guard case .rejected(let wait) = model.stage else { return XCTFail("Expected the wait screen") }
+        await model.perform(wait)
+        XCTAssertEqual(model.stage, .code)
+        XCTAssertEqual(model.destination, "jane@example.test")
+        XCTAssertTrue(model.changeAfter)
+        let raw = try JSONSerialization.jsonObject(with: fixture("rejections/email.resend_too_soon")) as! [String: Any]
+        XCTAssertEqual(model.resendAt, ISO8601.parse(raw["resend_available_at"] as! String))
+        let sends = try await requests("/email-codes")
+        XCTAssertEqual(sends.compactMap { try? json($0)["email"] as? String }, ["jane@example.test", "other@example.test"])
+    }
+
+    @MainActor
+    func testACaseClosedDuringSubmitOrConfirmGoesOnToTheReceipt() async throws {
+        let client = VerificationSession(try descriptor("submit-closed"))
+        var finished = 0
+        let schema = try XCTUnwrap(SessionInfo.decodeFixture("questionnaire-session").profile?.questionnaire)
+        let questions = QuestionsModel(client: client, questionnaire: schema, verifier: "Acme Bank") { finished += 1 }
+        for (key, value) in ["country": JSONValue.string("DE"), "employment": .string("Retired"), "birth_date": .string("1950-01-01"), "terms": .bool(true)] { questions.set(key, value) }
+        await questions.send()
+        let codes = ContactCodeModel(client: client, channel: .phone, verifier: "Acme Bank", onDone: { finished += 1 }, onLeave: { _ in })
+        codes.stage = .code; codes.setCode("123456")
+        await codes.confirm()
+        XCTAssertEqual(finished, 2)
+    }
+
+    @MainActor
+    func testAnswersAreLockedWhileSending() async throws {
+        let schema = try XCTUnwrap(SessionInfo.decodeFixture("questionnaire-session").profile?.questionnaire)
+        let model = QuestionsModel(client: VerificationSession(try descriptor("questionnaire")), questionnaire: schema, verifier: "Acme Bank") {}
+        model.stage = .sending
+        model.set("country", .string("DE"))
+        XCTAssertNil(model.answers["country"])
+        await model.send()
+        let submits = try await requests("/submit")
+        XCTAssertTrue(submits.isEmpty)
+    }
+
+    @MainActor
+    func testRevealingAnUnsupportedQuestionHandsTheFormBack() async throws {
+        let session = try String(decoding: fixture("questionnaire-session"), as: UTF8.self)
+            .replacingOccurrences(of: #""label": "Employer name",\s*"type": "text""#, with: #""label": "Employer name", "type": "signature""#, options: .regularExpression)
+        struct Payload: Decodable { let data: SessionInfo }
+        let questionnaire = try XCTUnwrap(JSONDecoder().decode(Payload.self, from: Data(session.utf8)).data.profile?.questionnaire)
+        XCTAssertTrue(questionnaire.isSupported)
+        var handedBack = false
+        let model = QuestionsModel(client: VerificationSession(try descriptor("questionnaire")), questionnaire: questionnaire, verifier: "Acme Bank", onHandBack: { handedBack = true }) {}
+        model.set("employment", .string("Student"))
+        XCTAssertFalse(handedBack)
+        model.set("employment", .string("Employed"))
+        XCTAssertTrue(handedBack)
+    }
+
+    func testAnEmptyOptionalFormSendsAnEmptyObject() async throws {
+        _ = try await VerificationSession(try descriptor("earlier")).submitAnswers([:], key: UUID())
+        let submits = try await requests("/submit")
+        let body = try json(XCTUnwrap(submits.first))
+        XCTAssertEqual((body["fields"] as? [String: Any])?.count, 0)
     }
 
     @MainActor

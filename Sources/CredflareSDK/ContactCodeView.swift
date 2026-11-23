@@ -23,6 +23,11 @@ struct ContactCodeView: View {
                 if let problem = model.problem { ErrorBox(message: problem) }
                 PrimaryButton(model.text(email ? CredflareSpec.CopyKey.emailSend : CredflareSpec.CopyKey.phoneSend)) { Task { await model.send() } }
                     .disabled(model.destination.trimmingCharacters(in: .whitespaces).isEmpty)
+                if model.sent != nil {
+                    Button(model.text(CredflareSpec.CopyKey.contactCodeTitle)) { model.returnToCode() }
+                        .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary)
+                        .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeLinkHeight))
+                }
             case .sending:
                 LoadingBlock(label: model.text(CredflareSpec.CopyKey.contactCodeSending))
             case .code:
@@ -44,6 +49,9 @@ struct ContactCodeView: View {
                             ThemedText(model.text(CredflareSpec.CopyKey.contactCodeResendIn, ["seconds": String(wait)]), style: CredflareSpec.Tokens.typeSmall, tone: \.muted)
                         } else if model.canResend {
                             SecondaryButton(model.text(CredflareSpec.CopyKey.contactCodeResend)) { Task { await model.send() } }
+                        }
+                        if model.changeAfter && wait > 0 {
+                            ThemedText(model.text(email ? CredflareSpec.CopyKey.emailChangeAfter : CredflareSpec.CopyKey.phoneChangeAfter), style: CredflareSpec.Tokens.typeSmall, tone: \.muted)
                         }
                         if let remaining = model.sent?.sendsRemaining {
                             ThemedText(model.text(CredflareSpec.CopyKey.contactCodeSendsRemaining, ["count": String(remaining)]), style: CredflareSpec.Tokens.typeSmall, tone: \.muted)

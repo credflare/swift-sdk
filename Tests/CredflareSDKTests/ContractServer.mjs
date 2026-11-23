@@ -15,8 +15,11 @@ function caseSession(token) {
  if (step === 1) return ['requirement-added-session',200];
  return ['requirement-added-session',200,(json) => { json.data.profile.verification_requirements = []; return json; }];
 }
+let cooldownSends = 0;
 function route(req, token, body) {
  if (token === 'Bearer unauthorized') return ['unauthorized',401];
+ if (token === 'Bearer submit-closed' && req.method === 'POST') return ['session-closed',409];
+ if (token === 'Bearer cooldown' && req.url.endsWith('-codes')) return cooldownSends++ === 0 ? ['email-code-request',202] : ['rejections/email.resend_too_soon',422];
  if (req.url.endsWith('-codes')) return [req.url.endsWith('/phone-codes') ? 'phone-code-request' : 'email-code-request',202];
  if (req.url.endsWith('-codes/confirm')) { if (progress[token]) progress[token] = 2; return ['email-code-confirm',201]; }
  if (['Bearer questionnaire','Bearer refresh-fail','Bearer closes'].includes(token)) {

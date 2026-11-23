@@ -144,6 +144,12 @@ public struct DocumentRequirement: Decodable, Identifiable {
 public enum DocumentSide: String, Codable { case front, back; public var label: String { rawValue.capitalized } }
 public enum CaptureSource: String, Codable { case camera, upload }
 public enum CaptureInput: String { case camera, upload, cameraOrUpload = "camera_or_upload" }
+enum DocumentCamera {
+    static func blockingCopyKey(pickerAvailable: Bool, hasCaptureDevice: Bool, permissionDenied: Bool) -> String? {
+        guard pickerAvailable && hasCaptureDevice else { return CredflareSpec.CopyKey.errorsCameraUnavailable }
+        return permissionDenied ? CredflareSpec.CopyKey.errorsCameraDenied : nil
+    }
+}
 public struct CaptureStep: Identifiable {
     public let side: DocumentSide; public let input: CaptureInput
     public var id: String { "\(input.rawValue):\(side.rawValue)" }

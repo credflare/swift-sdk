@@ -481,9 +481,12 @@ public struct CredflareVerificationView: View {
     private var allowedTypes: [UTType] { (model.info?.uploadLimits.allowedFileTypes ?? []).compactMap { UTType(filenameExtension: $0) } }
 
     private func openCamera() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else { model.error = t(Key.errorsCameraUnavailable); return }
         let permission = AVCaptureDevice.authorizationStatus(for: .video)
-        guard permission != .denied && permission != .restricted else { model.error = t(Key.errorsCameraDenied); return }
+        if let key = DocumentCamera.blockingCopyKey(pickerAvailable: UIImagePickerController.isSourceTypeAvailable(.camera),
+                                                    hasCaptureDevice: AVCaptureDevice.default(for: .video) != nil,
+                                                    permissionDenied: permission == .denied || permission == .restricted) {
+            model.error = t(key); return
+        }
         camera = true
     }
 }

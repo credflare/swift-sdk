@@ -1,0 +1,9 @@
+{
+    "success": false,
+    "message": "This question is not shown for the answers given.",
+    "errors": {
+        "fields.employer": [
+            "This question is not shown for the answers given."
+        ]
+    }
+}

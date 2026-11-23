@@ -13,7 +13,7 @@ private final class VerificationModel: ObservableObject {
         let data: Data; let name: String; let source: CaptureSource; let key = UUID()
         var fileID: Int?
     }
-    enum Screen: Equatable { case intro, documents, capture, liveness, location, receipt(hostSteps: Bool) }
+    enum Screen: Equatable { case intro, documents, capture, questions, contact, liveness, location, receipt(hostSteps: Bool) }
     @Published var info: SessionInfo?
     @Published var document: DocumentRequirement?
     @Published var index = 0
@@ -21,15 +21,19 @@ private final class VerificationModel: ObservableObject {
     @Published var working = false
     @Published var error: String?
     @Published var pendingRefresh = false
+    @Published var closed = false
+    @Published var handedBack = false
     @Published var editing = false
     @Published var received: [String] = []
     @Published var liveness: LivenessModel?
     @Published var location: LocationModel?
-    private var completed: Set<String> = []
+    @Published var questions: QuestionsModel?
+    @Published var contact: ContactCodeModel?
     fileprivate var client: VerificationSession?
     private var submissionKey = UUID()
     let makeFaceProvider: () -> FaceSignalProvider
     let makeLocationSource: () -> LocationSource
+    var onLeave: (VerificationResult) -> Void = { _ in }
 
     init(makeFaceProvider: @escaping () -> FaceSignalProvider, makeLocationSource: @escaping () -> LocationSource) {
         self.makeFaceProvider = makeFaceProvider; self.makeLocationSource = makeLocationSource
@@ -41,19 +45,25 @@ private final class VerificationModel: ObservableObject {
     var reviewing: Bool { document != nil && index == steps.count }
     var step: CaptureStep? { index < steps.count ? steps[index] : nil }
     var documents: [DocumentRequirement] { info?.profile?.documentRequirements ?? [] }
-    var nextRequirement: VerificationRequirement? {
-        info?.profile?.requirements.first { $0.isHandledInSDK && !completed.contains($0.type) }
-    }
-    var hostSteps: Bool {
-        guard let profile = info?.profile else { return false }
-        return !(profile.formSchema?.isEmpty ?? true) || profile.requirements.contains { !$0.isHandledInSDK }
-    }
     var screen: Screen {
-        guard info?.profile != nil else { return .intro }
+        guard let info else { return .intro }
         if document != nil { return .capture }
-        if !documents.isEmpty { return .documents }
-        if let next = nextRequirement { return next.facial != nil ? .liveness : .location }
-        return .receipt(hostSteps: hostSteps)
+        if closed { return .receipt(hostSteps: false) }
+        if handedBack { return .receipt(hostSteps: true) }
+        switch info.nextStep {
+        case .documents: return .documents
+        case .questions: return .questions
+        case .check(let next): return next.facial != nil ? .liveness : next.location != nil ? .location : .contact
+        case .receipt(let hostSteps): return .receipt(hostSteps: hostSteps)
+        }
+    }
+    var leaveResult: VerificationResult? {
+        var rejections: [Rejection] = []
+        if case .rejected(let rejection)? = contact?.stage { rejections.append(rejection) }
+        if case .rejected(let rejection)? = questions?.stage { rejections.append(rejection) }
+        if case .rejected(let rejection)? = liveness?.stage { rejections.append(rejection) }
+        if case .rejected(let rejection)? = location?.stage { rejections.append(rejection) }
+        return rejections.lazy.compactMap(\.leaveResult).first
     }
     var complete: Bool { if case .receipt(false) = screen { return !pendingRefresh }; return false }
 
@@ -80,24 +90,56 @@ private final class VerificationModel: ObservableObject {
     }
 
     fileprivate func prepareStep() {
-        guard document == nil, documents.isEmpty, let client, let next = nextRequirement else { liveness = nil; location = nil; return }
-        if let facial = next.facial, liveness == nil {
-            location = nil
-            liveness = LivenessModel(client: client, settings: facial, verifier: verifier, makeProvider: makeFaceProvider) { [weak self] in
-                Task { @MainActor in await self?.finished("facial_verification", receipt: Key.receiptSelfie) }
+        guard document == nil, let client, let step = info?.nextStep else { clearSteps(); return }
+        switch step {
+        case .questions(let questionnaire):
+            guard questions == nil else { return }
+            clearSteps()
+            questions = QuestionsModel(client: client, questionnaire: questionnaire, verifier: verifier, onHandBack: { [weak self] in
+                self?.handedBack = true; self?.clearSteps()
+            }, onClosed: { [weak self] in self?.closedCase() }) { [weak self] in
+                Task { @MainActor in await self?.finished(receipt: Key.receiptAnswers) }
             }
-        } else if let settings = next.location, location == nil {
-            liveness = nil
-            location = LocationModel(client: client, settings: settings, verifier: verifier, makeSource: makeLocationSource) { [weak self] in
-                Task { @MainActor in await self?.finished("location_verification", receipt: Key.receiptLocation) }
+        case .check(let next):
+            if let facial = next.facial {
+                guard liveness == nil else { return }
+                clearSteps()
+                liveness = LivenessModel(client: client, settings: facial, verifier: verifier, makeProvider: makeFaceProvider, onClosed: { [weak self] in self?.closedCase() }) { [weak self] in
+                    Task { @MainActor in await self?.finished(receipt: Key.receiptSelfie) }
+                }
+            } else if let settings = next.location {
+                guard location == nil else { return }
+                clearSteps()
+                location = LocationModel(client: client, settings: settings, verifier: verifier, makeSource: makeLocationSource, onClosed: { [weak self] in self?.closedCase() }) { [weak self] in
+                    Task { @MainActor in await self?.finished(receipt: Key.receiptLocation) }
+                }
+            } else if let channel = next.contact {
+                guard contact?.channel != channel else { return }
+                clearSteps()
+                contact = ContactCodeModel(client: client, channel: channel, verifier: verifier, onDone: { [weak self] in
+                    Task { @MainActor in await self?.finished(receipt: channel == .email ? Key.receiptEmail : Key.receiptPhone) }
+                }, onLeave: { [weak self] result in self?.onLeave(result) }, onClosed: { [weak self] in self?.closedCase() })
             }
+        case .documents, .receipt: clearSteps()
         }
+        applyHelp()
     }
 
-    private func finished(_ type: String, receipt: String) async {
-        completed.insert(type)
+    private func applyHelp() {
+        let help = info?.requester?.help ?? HelpContact()
+        questions?.help = help; contact?.help = help; liveness?.help = help; location?.help = help
+    }
+
+    private func clearSteps() { liveness = nil; location = nil; questions = nil; contact = nil }
+
+    private func closedCase() {
+        document = nil; captures = [:]; index = 0; error = nil
+        closed = true; pendingRefresh = false; clearSteps()
+    }
+
+    private func finished(receipt: String) async {
         received.append(text(receipt))
-        liveness = nil; location = nil
+        clearSteps()
         pendingRefresh = true
         await refresh()
     }
@@ -155,8 +197,11 @@ private final class VerificationModel: ObservableObject {
     func refresh() async {
         guard !working, let client else { return }; working = true; error = nil
         defer { working = false }
-        do { info = try await client.get(); pendingRefresh = false; prepareStep() }
-        catch { show(error, fallback: Key.errorsRefreshFailed) }
+        switch await client.refresh() {
+        case .next(let next, _): info = next; pendingRefresh = false; prepareStep()
+        case .closed: closed = true; pendingRefresh = false; clearSteps()
+        case .failed(let message): error = message
+        }
     }
 
     func send() async {
@@ -175,7 +220,11 @@ private final class VerificationModel: ObservableObject {
             _ = try await client.submit(documentTypeID: document.id, evidence: evidence, key: submissionKey)
             received.append(text(Key.receiptDocument, ["document": document.documentType.name]))
             self.document = nil; captures = [:]; index = 0; pendingRefresh = true
-        } catch { show(error, fallback: Key.errorsSendDocumentFailed); working = false; return }
+        } catch {
+            working = false
+            if case .api(409, _, _)? = error as? CredflareError { return closedCase() }
+            show(error, fallback: Key.errorsSendDocumentFailed); return
+        }
         working = false
         await refresh()
     }
@@ -225,11 +274,14 @@ public struct CredflareVerificationView: View {
         .foregroundStyle(theme.ink)
         .tint(theme.primary)
         .background(theme.surface.ignoresSafeArea())
-        .task { if autoStart && !autoStarted { autoStarted = true; await model.start(provider) } }
+        .task {
+            model.onLeave = { result in onResult(result) }
+            if autoStart && !autoStarted { autoStarted = true; await model.start(provider) }
+        }
         .navigationBarBackButtonHidden(true)
         .interactiveDismissDisabled()
         .confirmationDialog(t(Key.exitTitle), isPresented: $confirmClose, titleVisibility: .visible) {
-            Button(t(Key.exitLeave), role: .destructive) { onResult(.cancelled) }
+            Button(t(Key.exitLeave), role: .destructive) { onResult(model.leaveResult ?? .cancelled) }
             Button(t(Key.exitStay), role: .cancel) {}
         } message: { Text(t(Key.exitBody)) }
         .confirmationDialog(t(Key.exitDiscardTitle), isPresented: $confirmDiscard, titleVisibility: .visible) {
@@ -246,19 +298,36 @@ public struct CredflareVerificationView: View {
     }
 
     private var header: some View {
-        HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) {
-            if let name = model.info?.requester?.name { Text(name).specText(CredflareSpec.Tokens.typeLabel).lineLimit(1).fixedSize(horizontal: false, vertical: true) }
-            if model.info?.environment == "sandbox" {
-                Text(t(Key.commonTestMode)).specText(CredflareSpec.Tokens.typeChip).fixedSize()
-                    .foregroundStyle(theme.warningInk).padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(theme.warningSoft).clipShape(RoundedRectangle(cornerRadius: CGFloat(CredflareSpec.Tokens.radiusSm)))
+        let closeWidth: CGFloat = 64
+        return HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) {
+            Color.clear.frame(width: closeWidth, height: 1).accessibilityHidden(true)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) { requesterName(wraps: false); testModeBadge }
+                VStack(spacing: CGFloat(CredflareSpec.Tokens.spacingXs)) { requesterName(wraps: true); testModeBadge }
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity)
             Button(t(Key.commonClose)) { if model.complete { onResult(.submitted) } else { confirmClose = true } }
                 .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary).disabled(model.working)
+                .frame(minWidth: closeWidth, alignment: .trailing)
         }
+        .padding(.vertical, CGFloat(CredflareSpec.Tokens.spacingXs))
         .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeHeaderHeight))
         .padding(.horizontal, CredflareTheme.gutter)
+    }
+
+    @ViewBuilder private func requesterName(wraps: Bool) -> some View {
+        if let name = model.info?.requester?.name {
+            Text(name).specText(CredflareSpec.Tokens.typeLabel).multilineTextAlignment(.center)
+                .fixedSize(horizontal: !wraps, vertical: true)
+        }
+    }
+
+    @ViewBuilder private var testModeBadge: some View {
+        if model.info?.environment == "sandbox" {
+            Text(t(Key.commonTestMode)).specText(CredflareSpec.Tokens.typeChip).fixedSize()
+                .foregroundStyle(theme.warningInk).padding(.horizontal, 6).padding(.vertical, 3)
+                .background(theme.warningSoft).clipShape(RoundedRectangle(cornerRadius: CGFloat(CredflareSpec.Tokens.radiusSm)))
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -268,7 +337,7 @@ public struct CredflareVerificationView: View {
             SpecIconView(CredflareSpec.Icons.received, color: theme.success, size: CGFloat(CredflareSpec.Tokens.sizeIllustration))
             TitleText(t(Key.sendingSentTitle))
             ThemedText(t(Key.sendingSentBody), tone: \.muted)
-            PrimaryButton(t(Key.sendingCheckAgain)) { Task { await model.refresh() } }
+            PrimaryButton(t(model.error == nil ? Key.sendingCheckAgain : Key.commonTryAgain)) { Task { await model.refresh() } }
         } else {
             switch model.screen {
             case .intro:
@@ -278,6 +347,8 @@ public struct CredflareVerificationView: View {
                 PrimaryButton(t(model.error == nil ? Key.introStart : Key.commonTryAgain)) { Task { await model.start(provider) } }
             case .documents: documentsList
             case .capture: captureContent
+            case .questions: if let questions = model.questions { QuestionsView(model: questions) }
+            case .contact: if let contact = model.contact { ContactCodeView(model: contact) }
             case .liveness: if let liveness = model.liveness { LivenessView(model: liveness) }
             case .location: if let location = model.location { LocationView(model: location) }
             case .receipt(let hostSteps): receipt(hostSteps: hostSteps)
@@ -406,7 +477,7 @@ public struct CredflareVerificationView: View {
         }
         if hostSteps {
             ThemedText(t(Key.receiptHostSteps), tone: \.muted)
-            PrimaryButton(t(Key.commonReturnToApp)) { onResult(.hostActionRequired) }
+            PrimaryButton(t(Key.commonReturnToApp)) { onResult(.hostActionRequired()) }
         } else {
             PrimaryButton(t(Key.receiptDone)) { onResult(.submitted) }
         }
@@ -436,9 +507,12 @@ public struct CredflareVerificationView: View {
     private var allowedTypes: [UTType] { (model.info?.uploadLimits.allowedFileTypes ?? []).compactMap { UTType(filenameExtension: $0) } }
 
     private func openCamera() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else { model.error = t(Key.errorsCameraUnavailable); return }
         let permission = AVCaptureDevice.authorizationStatus(for: .video)
-        guard permission != .denied && permission != .restricted else { model.error = t(Key.errorsCameraDenied); return }
+        if let key = DocumentCamera.blockingCopyKey(pickerAvailable: UIImagePickerController.isSourceTypeAvailable(.camera),
+                                                    hasCaptureDevice: AVCaptureDevice.default(for: .video) != nil,
+                                                    permissionDenied: permission == .denied || permission == .restricted) {
+            model.error = t(key); return
+        }
         camera = true
     }
 }
@@ -482,7 +556,9 @@ extension CredflareVerificationView {
         "intro", "documents", "capture", "capture_selected", "review",
         "liveness_intro", "liveness_starting", "liveness_positioning", "liveness_blink", "liveness_smile", "liveness_turn_left", "liveness_turn_right", "liveness_nod", "liveness_face_lost", "liveness_timeout", "liveness_sending",
         "location_consent", "location_waiting", "location_found", "location_error", "location_rejected",
-        "receipt", "receipt_host_steps",
+        "questions", "questions_errors", "questions_rejected",
+        "contact_email", "contact_phone", "contact_code", "contact_wait", "contact_invalid", "contact_leave",
+        "refresh_failed", "receipt", "receipt_host_steps",
     ]
 
     public init(previewScreen: String) {
@@ -492,12 +568,14 @@ extension CredflareVerificationView {
 }
 
 extension VerificationModel {
-    static func previewSession(documents: Bool, requirements: [String], form: Bool) -> SessionInfo {
+    static func previewSession(documents: Bool, requirements: [String], form: Bool, questions: Bool = false) -> SessionInfo {
         let document = #"{"document_type":{"id":1,"name":"Demo identity document","two_sided":true,"capture_method":"camera"},"capture_method":"snapshot_or_upload","group_key":null,"rule":"all_of","min_required":null,"remaining_required":1,"requested_sides":["front","back"]}"#
         let facial = #"{"verification_type":"facial_verification","settings":{"gestures":["blink","smile","turn_left","turn_right","nod"],"gesture_count":3,"record_video":true,"video_retention_days":30}}"#
         let location = #"{"verification_type":"location_verification","settings":{"max_accuracy_m":50,"max_age_s":60,"mock_location":"reject","ip_country":"flag","reference":{"rule":"within","places":[{"label":"Head office"}]}}}"#
-        let verification = requirements.map { $0 == "facial" ? facial : location }.joined(separator: ",")
-        let json = #"{"session_id":"01a1fb33-a1d0-7081-aa9e-7ce29c2a41d8","environment":"sandbox","custom_message":null,"requester":{"name":"SDK's Workspace","logo_url":null},"upload_limits":{"max_file_size_bytes":10485760,"allowed_file_types":["jpg","png","webp","pdf"]},"profile":{"form_schema":"# + (form ? #"[{"key":"full_name","label":"Full name","type":"text","required":true}]"# : "null") + #","verification_requirements":["# + verification + #"],"document_requirements":["# + (documents ? document : "") + "]}}"
+        let contact = { (type: String) in #"{"verification_type":"\#(type)_verification","settings":null}"# }
+        let verification = requirements.map { $0 == "facial" ? facial : $0 == "location" ? location : contact($0) }.joined(separator: ",")
+        let schema = #"[{"key":"country","label":"Country of residence","type":"country","required":true},{"key":"employment","label":"Employment","type":"single_select","required":true,"options":["Employed","Self employed","Student","Retired"]},{"key":"employer","label":"Employer name","type":"text","required":true,"show_if":{"match":"all","conditions":[{"path":"form.employment","op":"equals","value":"Employed"}]}},{"key":"income","label":"Yearly income","type":"number","required":false,"min":0,"max":10000000,"show_if":{"match":"any","conditions":[{"path":"form.employment","op":"in","value":["Employed","Self employed"]}]}},{"key":"birth_date","label":"Date of birth","type":"date","required":true},{"key":"contact_email","label":"Email address","type":"email","required":false},{"key":"sources","label":"Sources of funds","type":"multi_select","required":false,"options":["Salary","Savings","Investments","Other"]},{"key":"sources_other","label":"Other source of funds","type":"text","required":true,"show_if":{"conditions":[{"path":"form.sources","op":"contains","value":"Other"}]}},{"key":"terms","label":"I agree to share these details for this verification","type":"consent","required":true}]"#
+        let json = #"{"session_id":"01a1fb33-a1d0-7081-aa9e-7ce29c2a41d8","environment":"sandbox","custom_message":null,"requester":{"name":"SDK's Workspace","logo_url":null},"upload_limits":{"max_file_size_bytes":10485760,"allowed_file_types":["jpg","png","webp","pdf"]},"profile":{"form_schema":"# + (questions ? schema : form ? #"[{"key":"founders","label":"Founders","type":"founders","required":true}]"# : "null") + #","verification_requirements":["# + verification + #"],"document_requirements":["# + (documents ? document : "") + "]}}"
         return try! JSONDecoder().decode(SessionInfo.self, from: Data(json.utf8))
     }
 
@@ -554,13 +632,43 @@ extension VerificationModel {
             case "location_waiting": location.stage = .waiting(improving: true)
             case "location_found": location.stage = .found(fix)
             case "location_error": location.stage = .failed(CredflareCopy.text(CredflareSpec.CopyKey.locationLowAccuracy), retry: true)
-            case "location_rejected": location.stage = .failed(LocationCopy.rejection(.api(422, "", code: .locationReferenceNotMatched), reference: location.settings.reference), retry: true)
+            case "location_rejected": location.stage = .rejected(Rejection(.api(422, "", code: .locationReferenceNotMatched), requester: model.verifier, reference: location.settings.reference))
             default: break
             }
+        case "questions":
+            model.info = previewSession(documents: false, requirements: [], form: false, questions: true)
+            model.prepareStep()
+            guard let questions = model.questions else { return model }
+            if screen == "questions_errors" {
+                questions.answers = ["employment": .string("Employed"), "income": .string("-5"), "sources": .array([.string("Other")])]
+                questions.errors = questions.questionnaire.errors(questions.answers)
+            }
+            if screen == "questions_rejected" { questions.stage = .rejected(Rejection(.api(422, "This question is not shown for the answers given.", code: nil), requester: model.verifier)) }
+        case "contact":
+            let phone = screen != "contact_email"
+            model.info = previewSession(documents: false, requirements: [phone ? "phone" : "email"], form: false)
+            model.prepareStep()
+            guard let contact = model.contact else { return model }
+            let resend = ISO8601.format(Date().addingTimeInterval(45)), expires = ISO8601.format(Date().addingTimeInterval(600))
+            let sent = try! JSONDecoder().decode(ContactCodeSent.self, from: Data(#"{"channel":"phone","destination":"+237*******01","expires_at":"\#(expires)","resend_available_at":"\#(resend)","sends_remaining":4}"#.utf8))
+            switch screen {
+            case "contact_phone": contact.destination = "+237 650 000 001"
+            case "contact_code": contact.sent = sent; contact.code = "1234"; contact.stage = .code
+            case "contact_wait": contact.sent = sent; contact.stage = .rejected(Rejection(.api(422, "", code: .phoneResendTooSoon), requester: model.verifier))
+            case "contact_invalid": contact.sent = sent; contact.stage = .rejected(Rejection(.api(422, "", code: .phoneCodeInvalid), requester: model.verifier))
+            case "contact_leave": contact.stage = .rejected(Rejection(.api(422, "", code: .phoneNotConfigured), requester: model.verifier, contact: HelpContact(email: "help@northwind.example")))
+            default: break
+            }
+        case "refresh":
+            model.info = previewSession(documents: false, requirements: [], form: false, questions: true)
+            model.received = [CredflareCopy.text(CredflareSpec.CopyKey.receiptAnswers)]
+            model.pendingRefresh = true
+            model.error = CredflareCopy.text(CredflareSpec.CopyKey.errorsRefreshFailed)
         case "receipt":
             let host = screen == "receipt_host_steps"
             model.info = previewSession(documents: false, requirements: [], form: host)
-            model.received = [CredflareCopy.text(CredflareSpec.CopyKey.receiptDocument, ["document": "Demo identity document"]), CredflareCopy.text(CredflareSpec.CopyKey.receiptSelfie), CredflareCopy.text(CredflareSpec.CopyKey.receiptLocation)]
+            model.handedBack = host
+            model.received = [CredflareCopy.text(CredflareSpec.CopyKey.receiptDocument, ["document": "Demo identity document"]), CredflareCopy.text(CredflareSpec.CopyKey.receiptAnswers), CredflareCopy.text(CredflareSpec.CopyKey.receiptPhone), CredflareCopy.text(CredflareSpec.CopyKey.receiptSelfie), CredflareCopy.text(CredflareSpec.CopyKey.receiptLocation)]
         default: break
         }
         return model

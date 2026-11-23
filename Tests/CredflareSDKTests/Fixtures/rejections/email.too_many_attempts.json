@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Too many wrong codes. Ask for a new one.",
+    "errors": [],
+    "code": "email.too_many_attempts"
+}

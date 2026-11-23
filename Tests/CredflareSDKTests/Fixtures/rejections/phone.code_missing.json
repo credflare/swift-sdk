@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Ask for a code first.",
+    "errors": [],
+    "code": "phone.code_missing"
+}

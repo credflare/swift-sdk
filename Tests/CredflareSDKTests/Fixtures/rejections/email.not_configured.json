@@ -1,0 +1,6 @@
+{
+    "success": false,
+    "message": "Confirming an email address is not available for this verification yet.",
+    "errors": [],
+    "code": "email.not_configured"
+}

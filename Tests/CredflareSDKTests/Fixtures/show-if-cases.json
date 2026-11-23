@@ -1,0 +1,871 @@
+{
+    "conditions": [
+        {
+            "name": "equals text",
+            "condition": {
+                "path": "form.employment",
+                "op": "equals",
+                "value": "Employed"
+            },
+            "form": {
+                "employment": "Employed"
+            },
+            "expect": true
+        },
+        {
+            "name": "equals is case sensitive",
+            "condition": {
+                "path": "form.employment",
+                "op": "equals",
+                "value": "employed"
+            },
+            "form": {
+                "employment": "Employed"
+            },
+            "expect": false
+        },
+        {
+            "name": "equals number and numeric string",
+            "condition": {
+                "path": "form.income",
+                "op": "equals",
+                "value": 5000
+            },
+            "form": {
+                "income": "5000.0"
+            },
+            "expect": true
+        },
+        {
+            "name": "equals boolean and string true",
+            "condition": {
+                "path": "form.terms",
+                "op": "equals",
+                "value": true
+            },
+            "form": {
+                "terms": "yes"
+            },
+            "expect": true
+        },
+        {
+            "name": "equals boolean false and string 0",
+            "condition": {
+                "path": "form.terms",
+                "op": "equals",
+                "value": false
+            },
+            "form": {
+                "terms": "0"
+            },
+            "expect": true
+        },
+        {
+            "name": "equals boolean and unrelated text",
+            "condition": {
+                "path": "form.terms",
+                "op": "equals",
+                "value": true
+            },
+            "form": {
+                "terms": "maybe"
+            },
+            "expect": false
+        },
+        {
+            "name": "equals list in order",
+            "condition": {
+                "path": "form.sources",
+                "op": "equals",
+                "value": [
+                    "Salary",
+                    "Savings"
+                ]
+            },
+            "form": {
+                "sources": [
+                    "Salary",
+                    "Savings"
+                ]
+            },
+            "expect": true
+        },
+        {
+            "name": "equals list in another order",
+            "condition": {
+                "path": "form.sources",
+                "op": "equals",
+                "value": [
+                    "Salary",
+                    "Savings"
+                ]
+            },
+            "form": {
+                "sources": [
+                    "Savings",
+                    "Salary"
+                ]
+            },
+            "expect": false
+        },
+        {
+            "name": "equals missing answer",
+            "condition": {
+                "path": "form.employment",
+                "op": "equals",
+                "value": "Employed"
+            },
+            "form": [],
+            "expect": false
+        },
+        {
+            "name": "equals null answer",
+            "condition": {
+                "path": "form.employment",
+                "op": "equals",
+                "value": "Employed"
+            },
+            "form": {
+                "employment": null
+            },
+            "expect": false
+        },
+        {
+            "name": "not_equals different",
+            "condition": {
+                "path": "form.employment",
+                "op": "not_equals",
+                "value": "Employed"
+            },
+            "form": {
+                "employment": "Student"
+            },
+            "expect": true
+        },
+        {
+            "name": "not_equals missing answer",
+            "condition": {
+                "path": "form.employment",
+                "op": "not_equals",
+                "value": "Employed"
+            },
+            "form": [],
+            "expect": false
+        },
+        {
+            "name": "not_equals empty string answer",
+            "condition": {
+                "path": "form.employment",
+                "op": "not_equals",
+                "value": "Employed"
+            },
+            "form": {
+                "employment": ""
+            },
+            "expect": true
+        },
+        {
+            "name": "gt number",
+            "condition": {
+                "path": "form.income",
+                "op": "gt",
+                "value": 1000
+            },
+            "form": {
+                "income": 1500
+            },
+            "expect": true
+        },
+        {
+            "name": "gt numeric string",
+            "condition": {
+                "path": "form.income",
+                "op": "gt",
+                "value": 1000
+            },
+            "form": {
+                "income": "999.5"
+            },
+            "expect": false
+        },
+        {
+            "name": "gte equal",
+            "condition": {
+                "path": "form.income",
+                "op": "gte",
+                "value": "1000"
+            },
+            "form": {
+                "income": 1000
+            },
+            "expect": true
+        },
+        {
+            "name": "lt text is not comparable",
+            "condition": {
+                "path": "form.income",
+                "op": "lt",
+                "value": 1000
+            },
+            "form": {
+                "income": "a lot"
+            },
+            "expect": false
+        },
+        {
+            "name": "lte missing answer",
+            "condition": {
+                "path": "form.income",
+                "op": "lte",
+                "value": 1000
+            },
+            "form": [],
+            "expect": false
+        },
+        {
+            "name": "lt dates",
+            "condition": {
+                "path": "form.birth_date",
+                "op": "lt",
+                "value": "2008-01-01"
+            },
+            "form": {
+                "birth_date": "1990-05-17"
+            },
+            "expect": true
+        },
+        {
+            "name": "gt dates",
+            "condition": {
+                "path": "form.birth_date",
+                "op": "gt",
+                "value": "2008-01-01"
+            },
+            "form": {
+                "birth_date": "1990-05-17"
+            },
+            "expect": false
+        },
+        {
+            "name": "gte date and date time",
+            "condition": {
+                "path": "form.birth_date",
+                "op": "gte",
+                "value": "2008-01-01T00:00:00Z"
+            },
+            "form": {
+                "birth_date": "2008-01-01"
+            },
+            "expect": true
+        },
+        {
+            "name": "lt date and non date text",
+            "condition": {
+                "path": "form.birth_date",
+                "op": "lt",
+                "value": "soon"
+            },
+            "form": {
+                "birth_date": "1990-05-17"
+            },
+            "expect": false
+        },
+        {
+            "name": "contains text ignores case",
+            "condition": {
+                "path": "form.employer",
+                "op": "contains",
+                "value": "bank"
+            },
+            "form": {
+                "employer": "First Bank of Douala"
+            },
+            "expect": true
+        },
+        {
+            "name": "contains empty value",
+            "condition": {
+                "path": "form.employer",
+                "op": "contains",
+                "value": ""
+            },
+            "form": {
+                "employer": "First Bank"
+            },
+            "expect": false
+        },
+        {
+            "name": "contains list member",
+            "condition": {
+                "path": "form.sources",
+                "op": "contains",
+                "value": "Other"
+            },
+            "form": {
+                "sources": [
+                    "Salary",
+                    "Other"
+                ]
+            },
+            "expect": true
+        },
+        {
+            "name": "contains list member is case sensitive",
+            "condition": {
+                "path": "form.sources",
+                "op": "contains",
+                "value": "other"
+            },
+            "form": {
+                "sources": [
+                    "Salary",
+                    "Other"
+                ]
+            },
+            "expect": false
+        },
+        {
+            "name": "contains empty list",
+            "condition": {
+                "path": "form.sources",
+                "op": "contains",
+                "value": "Other"
+            },
+            "form": {
+                "sources": []
+            },
+            "expect": false
+        },
+        {
+            "name": "contains number in text",
+            "condition": {
+                "path": "form.employer",
+                "op": "contains",
+                "value": 42
+            },
+            "form": {
+                "employer": "Shop 42"
+            },
+            "expect": true
+        },
+        {
+            "name": "not_contains list without member",
+            "condition": {
+                "path": "form.sources",
+                "op": "not_contains",
+                "value": "Other"
+            },
+            "form": {
+                "sources": [
+                    "Salary"
+                ]
+            },
+            "expect": true
+        },
+        {
+            "name": "not_contains missing answer",
+            "condition": {
+                "path": "form.sources",
+                "op": "not_contains",
+                "value": "Other"
+            },
+            "form": [],
+            "expect": false
+        },
+        {
+            "name": "not_contains empty value",
+            "condition": {
+                "path": "form.employer",
+                "op": "not_contains",
+                "value": ""
+            },
+            "form": {
+                "employer": "First Bank"
+            },
+            "expect": true
+        },
+        {
+            "name": "in list",
+            "condition": {
+                "path": "form.employment",
+                "op": "in",
+                "value": [
+                    "Employed",
+                    "Self employed"
+                ]
+            },
+            "form": {
+                "employment": "Self employed"
+            },
+            "expect": true
+        },
+        {
+            "name": "in list with numbers",
+            "condition": {
+                "path": "form.income",
+                "op": "in",
+                "value": [
+                    100,
+                    200
+                ]
+            },
+            "form": {
+                "income": "200"
+            },
+            "expect": true
+        },
+        {
+            "name": "in with a list answer",
+            "condition": {
+                "path": "form.sources",
+                "op": "in",
+                "value": [
+                    "Salary"
+                ]
+            },
+            "form": {
+                "sources": [
+                    "Salary"
+                ]
+            },
+            "expect": false
+        },
+        {
+            "name": "not_in list",
+            "condition": {
+                "path": "form.employment",
+                "op": "not_in",
+                "value": [
+                    "Employed",
+                    "Self employed"
+                ]
+            },
+            "form": {
+                "employment": "Student"
+            },
+            "expect": true
+        },
+        {
+            "name": "not_in with a list answer",
+            "condition": {
+                "path": "form.sources",
+                "op": "not_in",
+                "value": [
+                    "Salary"
+                ]
+            },
+            "form": {
+                "sources": [
+                    "Salary"
+                ]
+            },
+            "expect": true
+        },
+        {
+            "name": "not_in missing answer",
+            "condition": {
+                "path": "form.employment",
+                "op": "not_in",
+                "value": [
+                    "Employed"
+                ]
+            },
+            "form": [],
+            "expect": false
+        },
+        {
+            "name": "is_empty missing answer",
+            "condition": {
+                "path": "form.employer",
+                "op": "is_empty"
+            },
+            "form": [],
+            "expect": true
+        },
+        {
+            "name": "is_empty empty string",
+            "condition": {
+                "path": "form.employer",
+                "op": "is_empty"
+            },
+            "form": {
+                "employer": ""
+            },
+            "expect": true
+        },
+        {
+            "name": "is_empty empty list",
+            "condition": {
+                "path": "form.sources",
+                "op": "is_empty"
+            },
+            "form": {
+                "sources": []
+            },
+            "expect": true
+        },
+        {
+            "name": "is_empty false consent",
+            "condition": {
+                "path": "form.terms",
+                "op": "is_empty"
+            },
+            "form": {
+                "terms": false
+            },
+            "expect": false
+        },
+        {
+            "name": "is_empty zero",
+            "condition": {
+                "path": "form.income",
+                "op": "is_empty"
+            },
+            "form": {
+                "income": 0
+            },
+            "expect": false
+        },
+        {
+            "name": "is_not_empty text",
+            "condition": {
+                "path": "form.employer",
+                "op": "is_not_empty"
+            },
+            "form": {
+                "employer": "First Bank"
+            },
+            "expect": true
+        },
+        {
+            "name": "is_not_empty null",
+            "condition": {
+                "path": "form.employer",
+                "op": "is_not_empty"
+            },
+            "form": {
+                "employer": null
+            },
+            "expect": false
+        },
+        {
+            "name": "regex match",
+            "condition": {
+                "path": "form.contact_phone",
+                "op": "regex",
+                "value": "^\\+237"
+            },
+            "form": {
+                "contact_phone": "+237650000001"
+            },
+            "expect": true
+        },
+        {
+            "name": "regex is case sensitive",
+            "condition": {
+                "path": "form.employer",
+                "op": "regex",
+                "value": "bank"
+            },
+            "form": {
+                "employer": "First Bank"
+            },
+            "expect": false
+        },
+        {
+            "name": "regex is not anchored",
+            "condition": {
+                "path": "form.employer",
+                "op": "regex",
+                "value": "Ban"
+            },
+            "form": {
+                "employer": "First Bank"
+            },
+            "expect": true
+        },
+        {
+            "name": "regex with a list answer",
+            "condition": {
+                "path": "form.sources",
+                "op": "regex",
+                "value": "Salary"
+            },
+            "form": {
+                "sources": [
+                    "Salary"
+                ]
+            },
+            "expect": false
+        },
+        {
+            "name": "regex on a number",
+            "condition": {
+                "path": "form.income",
+                "op": "regex",
+                "value": "^[0-9]{4}$"
+            },
+            "form": {
+                "income": 5000
+            },
+            "expect": true
+        },
+        {
+            "name": "fuzzy_match close name",
+            "condition": {
+                "path": "form.employer",
+                "op": "fuzzy_match",
+                "value": {
+                    "text": "First Bank of Douala",
+                    "min_score": 80
+                }
+            },
+            "form": {
+                "employer": "  first   bank of douala "
+            },
+            "expect": true
+        },
+        {
+            "name": "fuzzy_match below score",
+            "condition": {
+                "path": "form.employer",
+                "op": "fuzzy_match",
+                "value": {
+                    "text": "First Bank of Douala",
+                    "min_score": 90
+                }
+            },
+            "form": {
+                "employer": "First Bnak Douala"
+            },
+            "expect": false
+        },
+        {
+            "name": "fuzzy_match above score",
+            "condition": {
+                "path": "form.employer",
+                "op": "fuzzy_match",
+                "value": {
+                    "text": "Jane Doe",
+                    "min_score": 75
+                }
+            },
+            "form": {
+                "employer": "Jane Do"
+            },
+            "expect": true
+        },
+        {
+            "name": "fuzzy_match compares only the first 200 characters",
+            "condition": {
+                "path": "form.bio",
+                "op": "fuzzy_match",
+                "value": {
+                    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                    "min_score": 100
+                }
+            },
+            "form": {
+                "bio": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "expect": true
+        },
+        {
+            "name": "fuzzy_match counts the 200 characters, not bytes",
+            "condition": {
+                "path": "form.bio",
+                "op": "fuzzy_match",
+                "value": {
+                    "text": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                    "min_score": 100
+                }
+            },
+            "form": {
+                "bio": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "expect": false
+        },
+        {
+            "name": "fuzzy_match cuts after collapsing whitespace",
+            "condition": {
+                "path": "form.bio",
+                "op": "fuzzy_match",
+                "value": {
+                    "text": "a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+                    "min_score": 100
+                }
+            },
+            "form": {
+                "bio": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+            },
+            "expect": true
+        },
+        {
+            "name": "consent equals true",
+            "condition": {
+                "path": "form.terms",
+                "op": "equals",
+                "value": true
+            },
+            "form": {
+                "terms": true
+            },
+            "expect": true
+        },
+        {
+            "name": "consent equals false when given",
+            "condition": {
+                "path": "form.terms",
+                "op": "equals",
+                "value": false
+            },
+            "form": {
+                "terms": true
+            },
+            "expect": false
+        },
+        {
+            "name": "country in list",
+            "condition": {
+                "path": "form.country",
+                "op": "in",
+                "value": [
+                    "DE",
+                    "FR"
+                ]
+            },
+            "form": {
+                "country": "DE"
+            },
+            "expect": true
+        }
+    ],
+    "show_if": [
+        {
+            "name": "no show_if is always shown",
+            "show_if": null,
+            "form": [],
+            "expect": true
+        },
+        {
+            "name": "all needs every condition",
+            "show_if": {
+                "match": "all",
+                "conditions": [
+                    {
+                        "path": "form.employment",
+                        "op": "equals",
+                        "value": "Employed"
+                    },
+                    {
+                        "path": "form.income",
+                        "op": "gt",
+                        "value": 1000
+                    }
+                ]
+            },
+            "form": {
+                "employment": "Employed",
+                "income": 500
+            },
+            "expect": false
+        },
+        {
+            "name": "all with every condition true",
+            "show_if": {
+                "match": "all",
+                "conditions": [
+                    {
+                        "path": "form.employment",
+                        "op": "equals",
+                        "value": "Employed"
+                    },
+                    {
+                        "path": "form.income",
+                        "op": "gt",
+                        "value": 1000
+                    }
+                ]
+            },
+            "form": {
+                "employment": "Employed",
+                "income": 5000
+            },
+            "expect": true
+        },
+        {
+            "name": "match defaults to all",
+            "show_if": {
+                "conditions": [
+                    {
+                        "path": "form.employment",
+                        "op": "equals",
+                        "value": "Employed"
+                    },
+                    {
+                        "path": "form.income",
+                        "op": "gt",
+                        "value": 1000
+                    }
+                ]
+            },
+            "form": {
+                "employment": "Employed",
+                "income": 500
+            },
+            "expect": false
+        },
+        {
+            "name": "any needs one condition",
+            "show_if": {
+                "match": "any",
+                "conditions": [
+                    {
+                        "path": "form.employment",
+                        "op": "equals",
+                        "value": "Employed"
+                    },
+                    {
+                        "path": "form.income",
+                        "op": "gt",
+                        "value": 1000
+                    }
+                ]
+            },
+            "form": {
+                "employment": "Student",
+                "income": 5000
+            },
+            "expect": true
+        },
+        {
+            "name": "any with no true condition",
+            "show_if": {
+                "match": "any",
+                "conditions": [
+                    {
+                        "path": "form.employment",
+                        "op": "equals",
+                        "value": "Employed"
+                    },
+                    {
+                        "path": "form.income",
+                        "op": "gt",
+                        "value": 1000
+                    }
+                ]
+            },
+            "form": [],
+            "expect": false
+        },
+        {
+            "name": "empty conditions are always shown",
+            "show_if": {
+                "match": "all",
+                "conditions": []
+            },
+            "form": [],
+            "expect": true
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "success": false,
+    "message": "Wait a minute before asking for another code.",
+    "errors": [],
+    "code": "phone.resend_too_soon",
+    "resend_available_at": "2026-11-23T15:32:59.000000Z",
+    "destination": "+237*******01",
+    "expires_at": "2026-11-23T15:41:59.000000Z",
+    "sends_remaining": 4
+}

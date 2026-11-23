@@ -1,5 +1,5 @@
 // GENERATED FILE, DO NOT EDIT.
-// Source: credflare sdk-spec 1.0.0 (ef15c85fc748). Regenerate with scripts/generate.mjs.
+// Source: credflare sdk-spec 1.1.0 (eb176f038a44). Regenerate with scripts/generate.mjs.
 
 /// One step of a gesture. value and holdFrames name a threshold key.
 public struct SpecGestureStep: Equatable, Sendable {
@@ -18,6 +18,15 @@ public struct SpecSetting: Equatable, Sendable {
     public let max: Double?
     public let options: [String]
     public let defaultJson: String?
+}
+
+/// Applicant copy for a rejection code. Every text field is a copy key. The place messages replace message when the location requirement has reference places.
+public struct SpecRejectionCopy: Equatable, Sendable {
+    public let title: String
+    public let message: String
+    public let action: String
+    public let placeMessageWithin: String?
+    public let placeMessageOutside: String?
 }
 
 public struct SpecPalette: Equatable, Sendable {
@@ -58,8 +67,8 @@ public struct SpecIcon: Equatable, Sendable {
 }
 
 public enum CredflareSpec {
-    public static let version = "1.0.0"
-    public static let hash = "ef15c85fc748"
+    public static let version = "1.1.0"
+    public static let hash = "eb176f038a44"
 
     public enum Liveness {
         public static let version: Int = 1
@@ -480,6 +489,9 @@ public enum CredflareSpec {
             "receipt.document": "{document} received",
             "receipt.selfie": "Selfie received",
             "receipt.location": "Location received",
+            "receipt.email": "Email address received",
+            "receipt.phone": "Phone number received",
+            "receipt.answers": "Answers received",
             "receipt.host_steps": "The app will guide you through the remaining steps.",
             "receipt.done": "Done",
             "selfie.title": "Take a selfie",
@@ -561,6 +573,102 @@ public enum CredflareSpec {
             "location.place.not_precise": "Your location is not precise enough to check this place. Move near a window or outside, then try again.",
             "location.place.rejected": "Your location does not match the place requested by {verifier}. Try again from the right place.",
             "location.place.retry": "Try again",
+            "email.title": "Confirm your email address",
+            "email.body": "{verifier} asks you to confirm an email address. We will send a short code to it.",
+            "email.label": "Email address",
+            "email.placeholder": "name@example.com",
+            "email.send": "Send code",
+            "email.invalid": "Enter a valid email address.",
+            "email.change": "Use a different email address",
+            "email.change_after": "You can use a different email address when the countdown ends.",
+            "phone.title": "Confirm your phone number",
+            "phone.body": "{verifier} asks you to confirm a phone number. We will send a short code to it by text message.",
+            "phone.label": "Phone number",
+            "phone.hint": "Start with + and your country code, for example +44 7700 900123.",
+            "phone.send": "Send code",
+            "phone.invalid": "Enter the number in international format, starting with + and the country code.",
+            "phone.change": "Use a different phone number",
+            "phone.change_after": "You can use a different phone number when the countdown ends.",
+            "contact_code.sending": "Sending a code…",
+            "contact_code.title": "Enter the code",
+            "contact_code.body": "We sent a code to {destination}. It expires in {minutes} minutes.",
+            "contact_code.label": "Code",
+            "contact_code.confirm": "Confirm",
+            "contact_code.confirming": "Checking the code…",
+            "contact_code.resend": "Send a new code",
+            "contact_code.resend_in": "You can ask for a new code in {seconds} seconds.",
+            "contact_code.sends_remaining": "You can ask for {count} more codes.",
+            "questions.title": "Answer a few questions",
+            "questions.body": "{verifier} asks for these details.",
+            "questions.optional": "Optional",
+            "questions.choose_one": "Choose an option",
+            "questions.choose_many": "Choose all that apply.",
+            "questions.choose_country": "Choose a country",
+            "questions.send": "Send answers",
+            "questions.sending": "Sending your answers…",
+            "questions.required": "Answer this question to continue.",
+            "questions.consent_required": "Give your consent to continue.",
+            "questions.invalid_number": "Enter a number.",
+            "questions.number_min": "Enter at least {min}.",
+            "questions.number_max": "Enter at most {max}.",
+            "questions.invalid_date": "Enter a real date.",
+            "questions.invalid_email": "Enter a valid email address.",
+            "questions.invalid_phone": "Enter a valid phone number.",
+            "questions.text_too_long": "Use at most 5000 characters.",
+            "questions.founders_name": "Founder name",
+            "questions.founders_add": "Add a founder",
+            "questions.founders_remove": "Remove",
+            "questions.founders_includes_me": "I am one of the founders",
+            "handoff.action": "Continue on your phone",
+            "handoff.title": "Continue on your phone",
+            "handoff.body": "Scan this code with your phone camera to carry on there. The code works once and expires in {minutes} minutes.",
+            "handoff.expired": "This code has expired.",
+            "handoff.new_code": "Show a new code",
+            "handoff.link_invalid": "This link has expired or was already used. Open a new one on the device where you started.",
+            "rejection.requested_by": "Requested by {verifier}.",
+            "rejection.help": "If you need help, contact {verifier}.",
+            "rejection.help_email": "If you need help, contact {verifier} at {help_email}.",
+            "rejection.help_url": "If you need help, visit {help_url}.",
+            "rejection.action.retry": "Try again",
+            "rejection.action.restart": "Start again",
+            "rejection.action.reenter_code": "Enter the code again",
+            "rejection.action.new_code": "Send a new code",
+            "rejection.action.wait": "Send a new code",
+            "rejection.action.leave": "Close",
+            "rejection.location_accuracy.title": "Location not precise enough",
+            "rejection.location_stale.title": "Location out of date",
+            "rejection.location_mock.title": "Location is being changed",
+            "rejection.location_ip_country.title": "Connection in another country",
+            "rejection.location_reference.title": "Location does not match",
+            "rejection.liveness_expired.title": "Time ran out",
+            "rejection.liveness_restart.title": "Start this step again",
+            "rejection.liveness_restart.message": "This attempt can no longer be used. Start this step again.",
+            "rejection.gesture_mismatch.title": "Movements did not match",
+            "rejection.gesture_mismatch.message": "Some movements were missing or out of order. Start this step again and follow each prompt.",
+            "rejection.not_camera.title": "Camera needed",
+            "rejection.not_camera.message": "This step needs photos taken with the camera during the step. Start it again and use the camera.",
+            "rejection.video_missing.title": "Recording missing",
+            "rejection.video_missing.message": "The recording of this step did not arrive. Start the step again.",
+            "rejection.video_too_long.title": "Recording too long",
+            "rejection.video_too_long.message": "The recording was longer than allowed. Start the step again and follow the prompts without pausing.",
+            "rejection.video_unreadable.title": "Recording could not be read",
+            "rejection.video_unreadable.message": "We could not read the recording. Start the step again.",
+            "rejection.email_not_configured.title": "Email confirmation unavailable",
+            "rejection.email_not_configured.message": "Confirming an email address is not available for this request yet. Contact {verifier}.",
+            "rejection.phone_not_configured.title": "Phone confirmation unavailable",
+            "rejection.phone_not_configured.message": "Confirming a phone number is not available for this request yet. Contact {verifier}.",
+            "rejection.code_resend_too_soon.title": "Wait before asking again",
+            "rejection.code_resend_too_soon.message": "A code was sent less than a minute ago. Wait a moment, then ask for a new code.",
+            "rejection.code_send_limit.title": "Too many codes sent",
+            "rejection.code_send_limit.message": "Too many codes were sent for this request. Try again in 24 hours.",
+            "rejection.code_missing.title": "No code to check",
+            "rejection.code_missing.message": "Ask for a code first, then enter it here.",
+            "rejection.code_expired.title": "Code expired",
+            "rejection.code_expired.message": "This code has expired. Ask for a new one.",
+            "rejection.code_invalid.title": "Code not correct",
+            "rejection.code_invalid.message": "This code is not correct. Check it and enter it again.",
+            "rejection.code_too_many_attempts.title": "Too many wrong codes",
+            "rejection.code_too_many_attempts.message": "Too many wrong codes were entered. Ask for a new code.",
             "errors.generic": "Something went wrong. Try again.",
             "errors.network": "Could not connect. Check your connection and try again.",
             "errors.session_expired": "Your session has expired. Close this screen and start again.",
@@ -584,6 +692,9 @@ public enum CredflareSpec {
             "errors.send_selfie_failed": "Could not send your selfie. Check your connection and try again.",
             "errors.challenge_failed": "We could not start this step. Check your connection and try again.",
             "errors.send_location_failed": "Could not send your location. Check your connection and try again.",
+            "errors.send_code_failed": "Could not send the code. Check your connection and try again.",
+            "errors.confirm_code_failed": "Could not check the code. Check your connection and try again.",
+            "errors.send_answers_failed": "Could not send your answers. Check your connection and try again.",
         ]
     }
 
@@ -666,6 +777,9 @@ public enum CredflareSpec {
         public static let receiptDocument: String = "receipt.document"
         public static let receiptSelfie: String = "receipt.selfie"
         public static let receiptLocation: String = "receipt.location"
+        public static let receiptEmail: String = "receipt.email"
+        public static let receiptPhone: String = "receipt.phone"
+        public static let receiptAnswers: String = "receipt.answers"
         public static let receiptHostSteps: String = "receipt.host_steps"
         public static let receiptDone: String = "receipt.done"
         public static let selfieTitle: String = "selfie.title"
@@ -747,6 +861,102 @@ public enum CredflareSpec {
         public static let locationPlaceNotPrecise: String = "location.place.not_precise"
         public static let locationPlaceRejected: String = "location.place.rejected"
         public static let locationPlaceRetry: String = "location.place.retry"
+        public static let emailTitle: String = "email.title"
+        public static let emailBody: String = "email.body"
+        public static let emailLabel: String = "email.label"
+        public static let emailPlaceholder: String = "email.placeholder"
+        public static let emailSend: String = "email.send"
+        public static let emailInvalid: String = "email.invalid"
+        public static let emailChange: String = "email.change"
+        public static let emailChangeAfter: String = "email.change_after"
+        public static let phoneTitle: String = "phone.title"
+        public static let phoneBody: String = "phone.body"
+        public static let phoneLabel: String = "phone.label"
+        public static let phoneHint: String = "phone.hint"
+        public static let phoneSend: String = "phone.send"
+        public static let phoneInvalid: String = "phone.invalid"
+        public static let phoneChange: String = "phone.change"
+        public static let phoneChangeAfter: String = "phone.change_after"
+        public static let contactCodeSending: String = "contact_code.sending"
+        public static let contactCodeTitle: String = "contact_code.title"
+        public static let contactCodeBody: String = "contact_code.body"
+        public static let contactCodeLabel: String = "contact_code.label"
+        public static let contactCodeConfirm: String = "contact_code.confirm"
+        public static let contactCodeConfirming: String = "contact_code.confirming"
+        public static let contactCodeResend: String = "contact_code.resend"
+        public static let contactCodeResendIn: String = "contact_code.resend_in"
+        public static let contactCodeSendsRemaining: String = "contact_code.sends_remaining"
+        public static let questionsTitle: String = "questions.title"
+        public static let questionsBody: String = "questions.body"
+        public static let questionsOptional: String = "questions.optional"
+        public static let questionsChooseOne: String = "questions.choose_one"
+        public static let questionsChooseMany: String = "questions.choose_many"
+        public static let questionsChooseCountry: String = "questions.choose_country"
+        public static let questionsSend: String = "questions.send"
+        public static let questionsSending: String = "questions.sending"
+        public static let questionsRequired: String = "questions.required"
+        public static let questionsConsentRequired: String = "questions.consent_required"
+        public static let questionsInvalidNumber: String = "questions.invalid_number"
+        public static let questionsNumberMin: String = "questions.number_min"
+        public static let questionsNumberMax: String = "questions.number_max"
+        public static let questionsInvalidDate: String = "questions.invalid_date"
+        public static let questionsInvalidEmail: String = "questions.invalid_email"
+        public static let questionsInvalidPhone: String = "questions.invalid_phone"
+        public static let questionsTextTooLong: String = "questions.text_too_long"
+        public static let questionsFoundersName: String = "questions.founders_name"
+        public static let questionsFoundersAdd: String = "questions.founders_add"
+        public static let questionsFoundersRemove: String = "questions.founders_remove"
+        public static let questionsFoundersIncludesMe: String = "questions.founders_includes_me"
+        public static let handoffAction: String = "handoff.action"
+        public static let handoffTitle: String = "handoff.title"
+        public static let handoffBody: String = "handoff.body"
+        public static let handoffExpired: String = "handoff.expired"
+        public static let handoffNewCode: String = "handoff.new_code"
+        public static let handoffLinkInvalid: String = "handoff.link_invalid"
+        public static let rejectionRequestedBy: String = "rejection.requested_by"
+        public static let rejectionHelp: String = "rejection.help"
+        public static let rejectionHelpEmail: String = "rejection.help_email"
+        public static let rejectionHelpUrl: String = "rejection.help_url"
+        public static let rejectionActionRetry: String = "rejection.action.retry"
+        public static let rejectionActionRestart: String = "rejection.action.restart"
+        public static let rejectionActionReenterCode: String = "rejection.action.reenter_code"
+        public static let rejectionActionNewCode: String = "rejection.action.new_code"
+        public static let rejectionActionWait: String = "rejection.action.wait"
+        public static let rejectionActionLeave: String = "rejection.action.leave"
+        public static let rejectionLocationAccuracyTitle: String = "rejection.location_accuracy.title"
+        public static let rejectionLocationStaleTitle: String = "rejection.location_stale.title"
+        public static let rejectionLocationMockTitle: String = "rejection.location_mock.title"
+        public static let rejectionLocationIpCountryTitle: String = "rejection.location_ip_country.title"
+        public static let rejectionLocationReferenceTitle: String = "rejection.location_reference.title"
+        public static let rejectionLivenessExpiredTitle: String = "rejection.liveness_expired.title"
+        public static let rejectionLivenessRestartTitle: String = "rejection.liveness_restart.title"
+        public static let rejectionLivenessRestartMessage: String = "rejection.liveness_restart.message"
+        public static let rejectionGestureMismatchTitle: String = "rejection.gesture_mismatch.title"
+        public static let rejectionGestureMismatchMessage: String = "rejection.gesture_mismatch.message"
+        public static let rejectionNotCameraTitle: String = "rejection.not_camera.title"
+        public static let rejectionNotCameraMessage: String = "rejection.not_camera.message"
+        public static let rejectionVideoMissingTitle: String = "rejection.video_missing.title"
+        public static let rejectionVideoMissingMessage: String = "rejection.video_missing.message"
+        public static let rejectionVideoTooLongTitle: String = "rejection.video_too_long.title"
+        public static let rejectionVideoTooLongMessage: String = "rejection.video_too_long.message"
+        public static let rejectionVideoUnreadableTitle: String = "rejection.video_unreadable.title"
+        public static let rejectionVideoUnreadableMessage: String = "rejection.video_unreadable.message"
+        public static let rejectionEmailNotConfiguredTitle: String = "rejection.email_not_configured.title"
+        public static let rejectionEmailNotConfiguredMessage: String = "rejection.email_not_configured.message"
+        public static let rejectionPhoneNotConfiguredTitle: String = "rejection.phone_not_configured.title"
+        public static let rejectionPhoneNotConfiguredMessage: String = "rejection.phone_not_configured.message"
+        public static let rejectionCodeResendTooSoonTitle: String = "rejection.code_resend_too_soon.title"
+        public static let rejectionCodeResendTooSoonMessage: String = "rejection.code_resend_too_soon.message"
+        public static let rejectionCodeSendLimitTitle: String = "rejection.code_send_limit.title"
+        public static let rejectionCodeSendLimitMessage: String = "rejection.code_send_limit.message"
+        public static let rejectionCodeMissingTitle: String = "rejection.code_missing.title"
+        public static let rejectionCodeMissingMessage: String = "rejection.code_missing.message"
+        public static let rejectionCodeExpiredTitle: String = "rejection.code_expired.title"
+        public static let rejectionCodeExpiredMessage: String = "rejection.code_expired.message"
+        public static let rejectionCodeInvalidTitle: String = "rejection.code_invalid.title"
+        public static let rejectionCodeInvalidMessage: String = "rejection.code_invalid.message"
+        public static let rejectionCodeTooManyAttemptsTitle: String = "rejection.code_too_many_attempts.title"
+        public static let rejectionCodeTooManyAttemptsMessage: String = "rejection.code_too_many_attempts.message"
         public static let errorsGeneric: String = "errors.generic"
         public static let errorsNetwork: String = "errors.network"
         public static let errorsSessionExpired: String = "errors.session_expired"
@@ -770,6 +980,9 @@ public enum CredflareSpec {
         public static let errorsSendSelfieFailed: String = "errors.send_selfie_failed"
         public static let errorsChallengeFailed: String = "errors.challenge_failed"
         public static let errorsSendLocationFailed: String = "errors.send_location_failed"
+        public static let errorsSendCodeFailed: String = "errors.send_code_failed"
+        public static let errorsConfirmCodeFailed: String = "errors.confirm_code_failed"
+        public static let errorsSendAnswersFailed: String = "errors.send_answers_failed"
     }
 
     public enum ErrorCode {
@@ -787,6 +1000,20 @@ public enum CredflareSpec {
         public static let livenessVideoMissing: String = "liveness.video_missing"
         public static let livenessVideoTooLong: String = "liveness.video_too_long"
         public static let livenessVideoUnreadable: String = "liveness.video_unreadable"
+        public static let emailNotConfigured: String = "email.not_configured"
+        public static let emailResendTooSoon: String = "email.resend_too_soon"
+        public static let emailSendLimit: String = "email.send_limit"
+        public static let emailCodeMissing: String = "email.code_missing"
+        public static let emailCodeExpired: String = "email.code_expired"
+        public static let emailCodeInvalid: String = "email.code_invalid"
+        public static let emailTooManyAttempts: String = "email.too_many_attempts"
+        public static let phoneNotConfigured: String = "phone.not_configured"
+        public static let phoneResendTooSoon: String = "phone.resend_too_soon"
+        public static let phoneSendLimit: String = "phone.send_limit"
+        public static let phoneCodeMissing: String = "phone.code_missing"
+        public static let phoneCodeExpired: String = "phone.code_expired"
+        public static let phoneCodeInvalid: String = "phone.code_invalid"
+        public static let phoneTooManyAttempts: String = "phone.too_many_attempts"
         public static let meanings: [String: String] = [
             "location.accuracy": "Accuracy is missing or larger than max_accuracy_m",
             "location.stale": "fix_time is missing, older than max_age_s plus clock_skew_s, or in the future",
@@ -802,6 +1029,333 @@ public enum CredflareSpec {
             "liveness.video_missing": "record_video is on and no video for this challenge was sent",
             "liveness.video_too_long": "The video is longer than max_video_seconds plus one second",
             "liveness.video_unreadable": "The server cannot read the video duration",
+            "email.not_configured": "No email sender serves this environment, for example the log driver on a live case",
+            "email.resend_too_soon": "A code was sent to this email address less than 60 seconds ago",
+            "email.send_limit": "Five codes were sent for this case within 24 hours",
+            "email.code_missing": "No unused code was requested for this case",
+            "email.code_expired": "The code is older than 10 minutes",
+            "email.code_invalid": "The code does not match",
+            "email.too_many_attempts": "Five wrong codes were entered; a new code is needed",
+            "phone.not_configured": "No SMS sender serves this environment, for example the log driver on a live case",
+            "phone.resend_too_soon": "A code was sent to this phone number less than 60 seconds ago",
+            "phone.send_limit": "Five codes were sent for this case within 24 hours",
+            "phone.code_missing": "No unused code was requested for this case",
+            "phone.code_expired": "The code is older than 10 minutes",
+            "phone.code_invalid": "The code does not match",
+            "phone.too_many_attempts": "Five wrong codes were entered; a new code is needed",
+        ]
+    }
+
+    public enum Rejection {
+        public static let requestedBy: String = "rejection.requested_by"
+        public static let help: String = "rejection.help"
+        public static let helpEmail: String = "rejection.help_email"
+        public static let helpUrl: String = "rejection.help_url"
+        public static let actions: [String] = [
+            "retry",
+            "restart",
+            "reenter_code",
+            "new_code",
+            "wait",
+            "leave",
+        ]
+        public static let actionLabels: [String: String] = [
+            "retry": "rejection.action.retry",
+            "restart": "rejection.action.restart",
+            "reenter_code": "rejection.action.reenter_code",
+            "new_code": "rejection.action.new_code",
+            "wait": "rejection.action.wait",
+            "leave": "rejection.action.leave",
+        ]
+        public static let codes: [String: SpecRejectionCopy] = [
+            "location.accuracy": SpecRejectionCopy(
+                title: "rejection.location_accuracy.title",
+                message: "location.low_accuracy",
+                action: "retry",
+                placeMessageWithin: "location.place.not_precise",
+                placeMessageOutside: "location.place.not_precise"
+            ),
+            "location.stale": SpecRejectionCopy(
+                title: "rejection.location_stale.title",
+                message: "location.stale",
+                action: "retry",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "location.mock": SpecRejectionCopy(
+                title: "rejection.location_mock.title",
+                message: "location.mock_detected",
+                action: "retry",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "location.ip_country": SpecRejectionCopy(
+                title: "rejection.location_ip_country.title",
+                message: "location.ip_country_mismatch",
+                action: "retry",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "location.reference_not_matched": SpecRejectionCopy(
+                title: "rejection.location_reference.title",
+                message: "location.place.rejected",
+                action: "retry",
+                placeMessageWithin: "location.place.not_matched_within",
+                placeMessageOutside: "location.place.not_matched_outside"
+            ),
+            "liveness.challenge_invalid": SpecRejectionCopy(
+                title: "rejection.liveness_restart.title",
+                message: "rejection.liveness_restart.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.challenge_expired": SpecRejectionCopy(
+                title: "rejection.liveness_expired.title",
+                message: "liveness.expired",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.challenge_used": SpecRejectionCopy(
+                title: "rejection.liveness_restart.title",
+                message: "rejection.liveness_restart.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.gesture_mismatch": SpecRejectionCopy(
+                title: "rejection.gesture_mismatch.title",
+                message: "rejection.gesture_mismatch.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.frame_out_of_window": SpecRejectionCopy(
+                title: "rejection.liveness_expired.title",
+                message: "liveness.expired",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.not_camera": SpecRejectionCopy(
+                title: "rejection.not_camera.title",
+                message: "rejection.not_camera.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.video_missing": SpecRejectionCopy(
+                title: "rejection.video_missing.title",
+                message: "rejection.video_missing.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.video_too_long": SpecRejectionCopy(
+                title: "rejection.video_too_long.title",
+                message: "rejection.video_too_long.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "liveness.video_unreadable": SpecRejectionCopy(
+                title: "rejection.video_unreadable.title",
+                message: "rejection.video_unreadable.message",
+                action: "restart",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.not_configured": SpecRejectionCopy(
+                title: "rejection.email_not_configured.title",
+                message: "rejection.email_not_configured.message",
+                action: "leave",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.resend_too_soon": SpecRejectionCopy(
+                title: "rejection.code_resend_too_soon.title",
+                message: "rejection.code_resend_too_soon.message",
+                action: "wait",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.send_limit": SpecRejectionCopy(
+                title: "rejection.code_send_limit.title",
+                message: "rejection.code_send_limit.message",
+                action: "leave",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.code_missing": SpecRejectionCopy(
+                title: "rejection.code_missing.title",
+                message: "rejection.code_missing.message",
+                action: "new_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.code_expired": SpecRejectionCopy(
+                title: "rejection.code_expired.title",
+                message: "rejection.code_expired.message",
+                action: "new_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.code_invalid": SpecRejectionCopy(
+                title: "rejection.code_invalid.title",
+                message: "rejection.code_invalid.message",
+                action: "reenter_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "email.too_many_attempts": SpecRejectionCopy(
+                title: "rejection.code_too_many_attempts.title",
+                message: "rejection.code_too_many_attempts.message",
+                action: "new_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.not_configured": SpecRejectionCopy(
+                title: "rejection.phone_not_configured.title",
+                message: "rejection.phone_not_configured.message",
+                action: "leave",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.resend_too_soon": SpecRejectionCopy(
+                title: "rejection.code_resend_too_soon.title",
+                message: "rejection.code_resend_too_soon.message",
+                action: "wait",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.send_limit": SpecRejectionCopy(
+                title: "rejection.code_send_limit.title",
+                message: "rejection.code_send_limit.message",
+                action: "leave",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.code_missing": SpecRejectionCopy(
+                title: "rejection.code_missing.title",
+                message: "rejection.code_missing.message",
+                action: "new_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.code_expired": SpecRejectionCopy(
+                title: "rejection.code_expired.title",
+                message: "rejection.code_expired.message",
+                action: "new_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.code_invalid": SpecRejectionCopy(
+                title: "rejection.code_invalid.title",
+                message: "rejection.code_invalid.message",
+                action: "reenter_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+            "phone.too_many_attempts": SpecRejectionCopy(
+                title: "rejection.code_too_many_attempts.title",
+                message: "rejection.code_too_many_attempts.message",
+                action: "new_code",
+                placeMessageWithin: nil,
+                placeMessageOutside: nil
+            ),
+        ]
+    }
+
+    public enum Requirements {
+        public static let version: Int = 1
+        public static let verificationTypes: [String] = [
+            "facial_verification",
+            "location_verification",
+            "email_verification",
+            "phone_verification",
+        ]
+        public static let contactCodesChannelsEmail: String = "email_verification"
+        public static let contactCodesChannelsPhone: String = "phone_verification"
+        public static let contactCodesCodeLength: Int = 6
+        public static let contactCodesTtlMinutes: Int = 10
+        public static let contactCodesMaxAttempts: Int = 5
+        public static let contactCodesResendSeconds: Int = 60
+        public static let contactCodesMaxSends: Int = 5
+        public static let contactCodesSendWindowHours: Int = 24
+        public static let contactCodesEmailMaxLength: Int = 254
+        public static let contactCodesPhoneMaxLength: Int = 32
+        public static let contactCodesPhoneStrip: String = "[\\s().-]"
+        public static let contactCodesPhonePattern: String = "^\\+[1-9][0-9]{6,14}$"
+        public static let questionsTypes: [String] = [
+            "text",
+            "textarea",
+            "email",
+            "number",
+            "date",
+            "select",
+            "tel",
+            "founders",
+            "phone",
+            "single_select",
+            "multi_select",
+            "country",
+            "consent",
+        ]
+        public static let questionsChoiceTypes: [String] = [
+            "select",
+            "single_select",
+            "multi_select",
+        ]
+        public static let questionsKeyPattern: String = "^[A-Za-z][A-Za-z0-9_-]{0,99}$"
+        public static let questionsMaxOptions: Int = 100
+        public static let questionsMaxOptionLength: Int = 200
+        public static let questionsTextMaxLength: Int = 5000
+        public static let questionsNumberPattern: String = "^-?[0-9]+(\\.[0-9]+)?$"
+        public static let questionsDatePattern: String = "^\\d{4}-\\d{2}-\\d{2}$"
+        public static let questionsPhonePattern: String = "^\\+?[0-9][0-9 ().-]{4,30}$"
+        public static let questionsCountryPattern: String = "^[A-Z]{2}$"
+        public static let questionsEmailMaxLength: Int = 254
+        public static let showIfMatch: [String] = [
+            "all",
+            "any",
+        ]
+        public static let showIfDefaultMatch: String = "all"
+        public static let showIfMaxConditions: Int = 10
+        public static let showIfPathPrefix: String = "form."
+        public static let showIfEarlierAnswers: String = "profile.form_answers"
+        public static let showIfOperators: [String] = [
+            "equals",
+            "not_equals",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "contains",
+            "not_contains",
+            "in",
+            "not_in",
+            "is_empty",
+            "is_not_empty",
+            "regex",
+            "fuzzy_match",
+        ]
+        public static let showIfMaxListValues: Int = 100
+        public static let showIfMaxPatternLength: Int = 200
+        public static let showIfFuzzyDefaultMinScore: Int = 80
+        public static let refreshAfter: [String] = [
+            "submit",
+            "email_code_confirm",
+            "phone_code_confirm",
+        ]
+        public static let refreshOpenStatuses: [String] = [
+            "pending",
+            "in_progress",
+        ]
+        public static let refreshOutstanding: [String] = [
+            "profile.document_requirements",
+            "profile.verification_requirements",
+            "profile.form_schema",
         ]
     }
 

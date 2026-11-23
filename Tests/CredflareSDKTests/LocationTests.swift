@@ -55,6 +55,22 @@ final class LocationTests: XCTestCase {
         XCTAssertEqual(outcome, .fix(fix(accuracy: 20)))
     }
 
+    func testOpenStreamOfMockFixesEndsWithTheMockMessageNotATimeout() async throws {
+        let location = try settings()
+        let now = self.now
+        let outcome = await LocationCollector.collect(from: FakeLocationSource(script: [fix(accuracy: 5, mock: true), fix(accuracy: 5, mock: true)]), settings: location, timeout: 0.3, now: { now })
+        XCTAssertEqual(outcome, .mock)
+    }
+
+    func testOpenStreamOfInaccurateFixesEndsWithTheLowAccuracyMessageNotATimeout() async throws {
+        let location = try settings()
+        let now = self.now
+        var outcome = await LocationCollector.collect(from: FakeLocationSource(script: [fix(accuracy: 400), fix(accuracy: 300)]), settings: location, timeout: 0.3, now: { now })
+        XCTAssertEqual(outcome, .lowAccuracy)
+        outcome = await LocationCollector.collect(from: FakeLocationSource(script: [fix(accuracy: 5, mock: true), fix(accuracy: 400)]), settings: location, timeout: 0.3, now: { now })
+        XCTAssertEqual(outcome, .mock)
+    }
+
     func testCollectorReportsDeniedTimeoutLowAccuracyAndMock() async throws {
         let location = try settings()
         let now = self.now

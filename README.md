@@ -16,11 +16,11 @@ The host backend creates or resumes the correct case and returns a temporary `Se
 
 Each document follows the backend's capture rule: saved files, camera photos, either source, or both sources. The view guides requested sides, preview, replacement and review. It refreshes requirements after collection, preserving grouped document choices. Credflare branding stays in a small footer; the verifier's name appears in the header.
 
-Camera source is client-reported. The liveness challenge records a server chosen sequence of movements for a reviewer; it does not prove a live person and does not detect deepfakes. Forms return to the host app. Unsent evidence stays in memory and requires a host restart after process termination. Keep the flow in a sheet or full-screen cover and use its Close control to handle cancellation; the host controls any programmatic removal of the view.
+Camera source is client-reported. The liveness challenge records a server chosen sequence of movements for a reviewer; it does not prove a live person and does not detect deepfakes. Questions and email or phone codes run in the view; question types it does not support return to the host app. Unsent evidence stays in memory and requires a host restart after process termination. Keep the flow in a sheet or full-screen cover and use its Close control to handle cancellation; the host controls any programmatic removal of the view.
 
 ## Session client
 
-`VerificationSession` provides async `get()`, `upload()`, `submit()`, `createLivenessChallenge()`, `uploadBiometric()`, `submitFacial()`, `submitLocation()`, `replaceSession()` and `cancel()`. `SessionInfo.Profile.requirements` parses facial and location settings, including reference place labels. Uploads and submissions accept UUID retry keys. Reuse each key with unchanged evidence after a network interruption. Renew access through the authenticated host backend for the same case.
+`VerificationSession` provides async `get()`, `upload()`, `submit()`, `createLivenessChallenge()`, `uploadBiometric()`, `submitFacial()`, `submitLocation()`, `requestCode()`, `confirmCode()`, `submitAnswers()`, `refresh()`, `replaceSession()` and `cancel()`. `SessionInfo.Profile.requirements` parses facial and location settings, including reference place labels, and the email and phone channels. `SessionInfo.nextStep` names the next outstanding step, `Questionnaire` evaluates `show_if` and checks answers, and `Rejection` maps a `422` to its spec screen. Uploads and submissions accept UUID retry keys. Reuse each key with unchanged evidence after a network interruption. Renew access through the authenticated host backend for the same case.
 
 The client uses an ephemeral session without cookies, credential storage or response caching. It rejects redirects and requires HTTPS except on loopback development URLs. Timeouts cover the complete request and response. Session descriptions redact the bearer token. The UI checks configured file types and sizes; the backend remains authoritative.
 
@@ -28,7 +28,7 @@ The package has no external runtime dependencies. Add a local Swift package depe
 
 ## Example and checks
 
-The native example connects to the local demo backend on port 3107. It requests a fresh session when Start is pressed. Host apps must declare `NSCameraUsageDescription` (documents and the liveness challenge) and `NSLocationWhenInUseUsageDescription` (location step). The challenge video has no audio track, so no microphone permission is needed. The example allows HTTP loopback networking only for local development and exposes synthetic documents through Files.
+The native example connects to the local demo backend on port 3107. It requests a fresh session when Start is pressed. Pass `-session-url <url>` as a launch argument to request sessions from another local server. Host apps must declare `NSCameraUsageDescription` (documents and the liveness challenge) and `NSLocationWhenInUseUsageDescription` (location step). The challenge video has no audio track, so no microphone permission is needed. The example allows HTTP loopback networking only for local development and exposes synthetic documents through Files.
 
 ```sh
 swift test

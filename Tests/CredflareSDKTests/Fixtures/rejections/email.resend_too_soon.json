@@ -1,0 +1,10 @@
+{
+    "success": false,
+    "message": "Wait a minute before asking for another code.",
+    "errors": [],
+    "code": "email.resend_too_soon",
+    "resend_available_at": "2026-11-23T15:32:57.000000Z",
+    "destination": "s***********@example.test",
+    "expires_at": "2026-11-23T15:41:57.000000Z",
+    "sends_remaining": 4
+}

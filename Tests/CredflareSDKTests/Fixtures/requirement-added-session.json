@@ -1,0 +1,42 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "session_id": "01a2008b-bc4d-7111-b10f-d2e439853704",
+        "expires_at": "2026-11-22T00:28:07.000000Z",
+        "status": "in_progress",
+        "environment": "sandbox",
+        "custom_message": null,
+        "requester": {
+            "name": "Michaela Reynolds's Workspace",
+            "logo_url": null
+        },
+        "brand": null,
+        "upload_limits": {
+            "max_file_size_bytes": 10485760,
+            "allowed_file_types": [
+                "jpg",
+                "png",
+                "webp",
+                "pdf"
+            ],
+            "max_uploads_per_requirement": 5
+        },
+        "profile": {
+            "name": "Questionnaire example",
+            "form_schema": null,
+            "verification_requirements": [
+                {
+                    "verification_type": "phone_verification",
+                    "settings": null
+                }
+            ],
+            "document_requirements": []
+        },
+        "capabilities": {
+            "trusted_camera": false,
+            "liveness": "challenge",
+            "deepfake_detection": false
+        }
+    }
+}

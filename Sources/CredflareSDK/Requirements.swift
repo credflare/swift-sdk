@@ -54,11 +54,13 @@ public struct VerificationRequirement: Sendable {
     public let type: String
     public let facial: FacialSettings?
     public let location: LocationSettings?
-    public var isHandledInSDK: Bool { facial != nil || location != nil }
+    public let contact: ContactChannel?
+    public var isHandledInSDK: Bool { facial != nil || location != nil || contact != nil }
     init(_ raw: JSONValue) {
         type = raw["verification_type"]?.stringValue ?? ""
         facial = type == "facial_verification" ? FacialSettings(raw["settings"]) : nil
         location = type == "location_verification" ? LocationSettings(raw["settings"]) : nil
+        contact = ContactChannel(verificationType: type)
     }
 }
 
@@ -165,7 +167,7 @@ enum ISO8601 {
 }
 
 extension SessionInfo.Profile {
-    public var stepsAfterDocuments: [String] { requirements.filter(\.isHandledInSDK).map(\.type) }
+    public var stepsAfterDocuments: [String] { requirements.filter { $0.facial != nil || $0.location != nil }.map(\.type) }
 
     public var nextStepsCopyKey: String? {
         var steps: [String] = []
@@ -175,7 +177,7 @@ extension SessionInfo.Profile {
         case ["location_verification"]: return CredflareSpec.CopyKey.documentsLocationNext
         case ["facial_verification", "location_verification"]: return CredflareSpec.CopyKey.documentsSelfieLocationNext
         case ["location_verification", "facial_verification"]: return CredflareSpec.CopyKey.documentsLocationSelfieNext
-        case []: return needsHostSteps ? CredflareSpec.CopyKey.documentsHostStepsNext : nil
+        case []: return needsHostSteps || questionnaire != nil || requirements.contains { $0.contact != nil } ? CredflareSpec.CopyKey.documentsHostStepsNext : nil
         default: return nil
         }
     }

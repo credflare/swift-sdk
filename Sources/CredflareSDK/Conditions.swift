@@ -222,6 +222,7 @@ public enum Conditions {
         func normalize(_ value: JSONValue) -> String {
             text(value).lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                .unicodeScalars.prefix(fuzzyLength).reduce(into: "") { $0.unicodeScalars.append($1) }
         }
         let score = expected["min_score"] ?? .null
         let minimum: Double
@@ -231,6 +232,7 @@ public enum Conditions {
         return similarity(normalize(actual), normalize(target)) >= minimum
     }
 
+    static let fuzzyLength = 200
     private static let scores = NSCache<NSString, NSNumber>()
 
     public static func similarity(_ a: String, _ b: String) -> Double {

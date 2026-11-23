@@ -8,7 +8,7 @@ final class ShowIfTests: XCTestCase {
 
     func testEveryBackendConditionCaseMatches() throws {
         let cases = try XCTUnwrap(fixture("show-if-cases")["conditions"]?.arrayValue)
-        XCTAssertEqual(cases.count, 55)
+        XCTAssertEqual(cases.count, 58)
         for item in cases {
             let name = item["name"]?.stringValue ?? ""
             let condition = ShowIfCondition(try XCTUnwrap(item["condition"], name))

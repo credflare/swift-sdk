@@ -287,6 +287,35 @@ extension ClientTests {
         XCTAssertTrue(model.canResend)
     }
 
+    @MainActor
+    func testEarlierAnswersRevealFollowUpsWithoutBeingSentAgain() async throws {
+        let client = VerificationSession(try descriptor("earlier"))
+        let info = try await client.get()
+        XCTAssertEqual(info.profile?.earlierAnswers["employment"]?.stringValue, "Employed")
+        guard case .questions(let questionnaire) = info.nextStep else { return XCTFail("Expected the questionnaire") }
+        var done = false
+        let model = QuestionsModel(client: client, questionnaire: questionnaire, verifier: "Acme Bank") { done = true }
+        XCTAssertEqual(model.visible.map(\.key), ["employer"])
+        await model.send()
+        XCTAssertEqual(model.errors, ["employer": CredflareSpec.CopyKey.questionsRequired])
+        model.set("employer", .string(" Acme "))
+        await model.send()
+        XCTAssertTrue(done)
+        let submits = try await requests("/submit")
+        let body = try json(XCTUnwrap(submits.first))
+        XCTAssertEqual(body["fields"] as? [String: String], ["employer": "Acme"])
+    }
+
+    func testAnEarlierAnswerForAQuestionAskedAgainIsItsStartingValue() throws {
+        let earlier: [String: JSONValue] = ["employment": .string("Employed")]
+        let schema = try XCTUnwrap(SessionInfo.decodeFixture("questionnaire-session").profile?.formSchema?.arrayValue)
+        let questionnaire = try XCTUnwrap(Questionnaire(.array(schema), earlierAnswers: earlier))
+        XCTAssertEqual(questionnaire.startingAnswers["employment"]?.stringValue, "Employed")
+        XCTAssertTrue(questionnaire.visibleQuestions(questionnaire.startingAnswers).map(\.key).contains("employer"))
+        XCTAssertFalse(questionnaire.visibleQuestions(["employment": .string("Student")]).map(\.key).contains("employer"))
+        XCTAssertEqual(questionnaire.fields(["employment": .string("Student")])["employment"]?.stringValue, "Student")
+    }
+
     @available(*, deprecated)
     func testEarlierPublicAPIStillCompiles() async throws {
         do { _ = try await VerificationSession(try descriptor("reject:phone.send_limit")).requestCode(.phone, to: "+237650000001"); XCTFail("Expected rejection") }

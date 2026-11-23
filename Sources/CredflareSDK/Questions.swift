@@ -26,16 +26,21 @@ public struct Question: Identifiable, Sendable {
 
 public struct Questionnaire: Sendable {
     public let questions: [Question]
-    public init(questions: [Question]) { self.questions = questions }
-    init?(_ schema: JSONValue?) {
+    public let earlierAnswers: [String: JSONValue]
+    public init(questions: [Question], earlierAnswers: [String: JSONValue] = [:]) { self.questions = questions; self.earlierAnswers = earlierAnswers }
+    init?(_ schema: JSONValue?, earlierAnswers: [String: JSONValue] = [:]) {
         guard let list = schema?.arrayValue, !list.isEmpty else { return nil }
-        questions = list.map(Question.init)
+        self.init(questions: list.map(Question.init), earlierAnswers: earlierAnswers)
     }
 
-    public var isSupported: Bool { visibleQuestions([:]).allSatisfy(\.isSupported) }
+    public var startingAnswers: [String: JSONValue] {
+        earlierAnswers.filter { key, _ in questions.contains { $0.key == key } }
+    }
+
+    public var isSupported: Bool { visibleQuestions(startingAnswers).allSatisfy(\.isSupported) }
 
     public func visibleQuestions(_ answers: [String: JSONValue]) -> [Question] {
-        var context: [String: JSONValue] = [:]
+        var context = earlierAnswers.filter { key, _ in !questions.contains { $0.key == key } }
         var shown: [Question] = []
         for question in questions where Conditions.visible(question.showIf, form: .object(context)) {
             shown.append(question)

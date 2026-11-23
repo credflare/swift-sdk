@@ -17,6 +17,7 @@ final class QuestionsModel: ObservableObject {
 
     init(client: VerificationSession, questionnaire: Questionnaire, verifier: String, onDone: @escaping () -> Void) {
         self.client = client; self.questionnaire = questionnaire; self.verifier = verifier; self.onDone = onDone
+        answers = questionnaire.startingAnswers
     }
 
     var visible: [Question] { questionnaire.visibleQuestions(answers) }

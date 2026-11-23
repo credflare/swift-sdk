@@ -23,6 +23,7 @@ function route(req, token, body) {
   if (req.method === 'GET') return caseSession(token);
   if (req.url.endsWith('/submit')) { progress[token] = 1; return ['questionnaire-submission',201]; }
  }
+ if (token === 'Bearer earlier') return req.method === 'GET' ? ['questionnaire-earlier-answers-session',200] : ['questionnaire-submission',201];
  if (token === 'Bearer hidden-answer' && req.url.endsWith('/submit')) return ['questionnaire-hidden-answer',422];
  if (req.method === 'DELETE') return ['cancelled',200];
  if (req.url.endsWith('/liveness-challenges')) return ['liveness-challenge',201];

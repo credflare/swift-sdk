@@ -1,0 +1,59 @@
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": {
+        "session_id": "01a20650-7f5d-7155-a533-7a72c970563d",
+        "expires_at": "2026-11-23T03:21:08.000000Z",
+        "status": "in_progress",
+        "environment": "sandbox",
+        "custom_message": null,
+        "requester": {
+            "name": "Mrs. Zola Hane I's Workspace",
+            "logo_url": null,
+            "help_email": null,
+            "help_url": null
+        },
+        "brand": null,
+        "upload_limits": {
+            "max_file_size_bytes": 10485760,
+            "allowed_file_types": [
+                "jpg",
+                "png",
+                "webp",
+                "pdf"
+            ],
+            "max_uploads_per_requirement": 5
+        },
+        "profile": {
+            "name": "Employment details",
+            "form_schema": [
+                {
+                    "key": "employer",
+                    "label": "Employer name",
+                    "type": "text",
+                    "required": true,
+                    "show_if": {
+                        "match": "all",
+                        "conditions": [
+                            {
+                                "path": "form.employment",
+                                "op": "equals",
+                                "value": "Employed"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "form_answers": {
+                "employment": "Employed"
+            },
+            "verification_requirements": [],
+            "document_requirements": []
+        },
+        "capabilities": {
+            "trusted_camera": false,
+            "liveness": "challenge",
+            "deepfake_detection": false
+        }
+    }
+}

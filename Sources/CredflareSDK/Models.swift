@@ -76,11 +76,13 @@ public struct SessionInfo: Decodable {
         public let documentRequirements: [DocumentRequirement]
         public let formSchema: JSONValue?
         public let verificationRequirements: [JSONValue]
-        enum CodingKeys: String, CodingKey { case documentRequirements = "document_requirements", formSchema = "form_schema", verificationRequirements = "verification_requirements" }
+        public let formAnswers: JSONValue?
+        enum CodingKeys: String, CodingKey { case documentRequirements = "document_requirements", formSchema = "form_schema", verificationRequirements = "verification_requirements", formAnswers = "form_answers" }
+        public var earlierAnswers: [String: JSONValue] { if case .object(let answers)? = formAnswers { return answers }; return [:] }
         public var requirements: [VerificationRequirement] { verificationRequirements.map(VerificationRequirement.init) }
         public var requiresSelfie: Bool { requirements.contains { $0.facial != nil } }
         public var requiresLocation: Bool { requirements.contains { $0.location != nil } }
-        public var questionnaire: Questionnaire? { Questionnaire(formSchema) }
+        public var questionnaire: Questionnaire? { Questionnaire(formSchema, earlierAnswers: earlierAnswers) }
         public var needsHostSteps: Bool { !(questionnaire?.isSupported ?? true) || requirements.contains { !$0.isHandledInSDK } }
     }
 }

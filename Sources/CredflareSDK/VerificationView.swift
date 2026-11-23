@@ -289,19 +289,36 @@ public struct CredflareVerificationView: View {
     }
 
     private var header: some View {
-        HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) {
-            if let name = model.info?.requester?.name { Text(name).specText(CredflareSpec.Tokens.typeLabel).lineLimit(1).fixedSize(horizontal: false, vertical: true) }
-            if model.info?.environment == "sandbox" {
-                Text(t(Key.commonTestMode)).specText(CredflareSpec.Tokens.typeChip).fixedSize()
-                    .foregroundStyle(theme.warningInk).padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(theme.warningSoft).clipShape(RoundedRectangle(cornerRadius: CGFloat(CredflareSpec.Tokens.radiusSm)))
+        let closeWidth: CGFloat = 64
+        return HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) {
+            Color.clear.frame(width: closeWidth, height: 1).accessibilityHidden(true)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: CGFloat(CredflareSpec.Tokens.spacingSm)) { requesterName(wraps: false); testModeBadge }
+                VStack(spacing: CGFloat(CredflareSpec.Tokens.spacingXs)) { requesterName(wraps: true); testModeBadge }
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity)
             Button(t(Key.commonClose)) { if model.complete { onResult(.submitted) } else { confirmClose = true } }
                 .font(.system(size: CGFloat(CredflareSpec.Tokens.typeButton.size), weight: .medium)).foregroundStyle(theme.primary).disabled(model.working)
+                .frame(minWidth: closeWidth, alignment: .trailing)
         }
+        .padding(.vertical, CGFloat(CredflareSpec.Tokens.spacingXs))
         .frame(minHeight: CGFloat(CredflareSpec.Tokens.sizeHeaderHeight))
         .padding(.horizontal, CredflareTheme.gutter)
+    }
+
+    @ViewBuilder private func requesterName(wraps: Bool) -> some View {
+        if let name = model.info?.requester?.name {
+            Text(name).specText(CredflareSpec.Tokens.typeLabel).multilineTextAlignment(.center)
+                .fixedSize(horizontal: !wraps, vertical: true)
+        }
+    }
+
+    @ViewBuilder private var testModeBadge: some View {
+        if model.info?.environment == "sandbox" {
+            Text(t(Key.commonTestMode)).specText(CredflareSpec.Tokens.typeChip).fixedSize()
+                .foregroundStyle(theme.warningInk).padding(.horizontal, 6).padding(.vertical, 3)
+                .background(theme.warningSoft).clipShape(RoundedRectangle(cornerRadius: CGFloat(CredflareSpec.Tokens.radiusSm)))
+        }
     }
 
     @ViewBuilder private var content: some View {
